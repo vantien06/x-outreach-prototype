@@ -29,7 +29,15 @@ class Person:
 
 
 class Queries(BaseModel):
-    queries: list[str] = Field(description="3 to 5 X recent-search queries, from narrow to broad")
+    queries: list[str] = Field(description="3 to 5 X recent-search queries, most important first")
+    builder_terms: list[str] = Field(
+        default_factory=list,
+        description="6 to 12 lowercase words or short phrases that, in a bio or post, suggest the author "
+                    "personally does this work (roles, first-person building verbs, tools, jargon of the segment)")
+    off_target_terms: list[str] = Field(
+        default_factory=list,
+        description="6 to 12 lowercase words or short phrases that suggest the account is not such a person "
+                    "(news, curation, exchanges, courses, recruiting, events, promotion)")
 
 
 class Fit(BaseModel):

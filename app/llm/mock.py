@@ -18,7 +18,8 @@ def _first_sentence(text: str, limit: int = 110) -> str:
 class MockLLM:
     def build_queries(self, segment: str) -> Queries:
         words = [w for w in re.findall(r"[A-Za-z][A-Za-z-]{3,}", segment)][:4] or ["robotics", "AI"]
-        return Queries(queries=["(" + " OR ".join(words) + ") -is:retweet -is:reply"])
+        return Queries(queries=["(" + " OR ".join(words) + ") -is:retweet -is:reply"],
+                       builder_terms=[k.strip() for k in KEYWORDS], off_target_terms=list(NEGATIVE))
 
     def score_fit(self, segment: str, person: Person) -> Fit:
         blob = (person.bio + " " + " ".join(e.text for e in person.evidence)).lower() + " "

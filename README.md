@@ -115,8 +115,9 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 | `SEND_SPACING_SECONDS` | `90` | Pause between two sends from the same account |
 | `DAILY_CANDIDATE_CAP` | `80` | People scored per account per UTC day (`0` = no cap) |
 | `GLOBAL_BUDGET_USD` | `0` | Estimated spend after which discovery, drafting and sending lock for everyone (`0` = no ceiling) |
-| `MAX_QUERIES`, `POSTS_PER_QUERY`, `MAX_POSTS_PER_CAMPAIGN` | `5`, `40`, `200` | Bounds on what one segment search may read |
-| `MAX_CANDIDATES_PER_CAMPAIGN` | `30` | People scored per campaign |
+| `MAX_QUERIES`, `POSTS_PER_QUERY`, `MAX_POSTS_PER_CAMPAIGN` | `3`, `20`, `60` | Bounds on what one Quick segment search may read |
+| `MAX_CANDIDATES_PER_CAMPAIGN` | `15` | People scored per Quick campaign |
+| `WIDE_SEARCH_FACTOR` | `3` | A Wide search multiplies the four limits above by this |
 | `SEED_FOLLOWING_LIMIT`, `SEED_POSTS_PER_CANDIDATE` | `100`, `5` | Bounds on a seed campaign |
 | `CHAT_READS_PER_15MIN`, `CHAT_READS_PER_DAY`, `CHAT_READS_PER_TICK` | `60`, `6000`, `8` | Self-imposed limits on reply checks |
 
@@ -124,11 +125,15 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 
 1. **Sign in with X** using the account that will send.
 2. **New campaign.** Pick one:
-   - *Target segment*: describe who you want ("founders and engineers building AI agents in Southeast Asia"). The tool writes several searches of different breadth over the last 7 days of posts.
+   - *Target segment*: describe who you want ("founders and engineers building AI agents in Southeast Asia"). The tool writes searches over the last 7 days of posts that pair first-person phrasing ("I'm building", "we shipped") with the segment's own terms, so they favour people describing their own work over accounts that only talk about the topic.
    - *Seed accounts*: enter a few handles. The tool looks at who they follow.
 
    Also say who you are and why you are writing. Drafts only say about you what you write here.
-3. **Look at the people found.** Each has a fit score, a reason, and the bio and posts the reason rests on, with links. People scoring 60 or more who can receive your DM are preselected. Accounts that look like organisations, news feeds or promotion are left out before scoring and named in the note at the top, next to the queries used and the estimated cost of the search.
+
+   *Search size* (segment campaigns): **Quick** is the default: 3 searches, at most 60 posts, at most 15 people scored, about $0.31. **Wide** is about three times the people for about three times the cost. The form shows both estimates.
+3. **Look at the people found.** Each has a fit score and a short reason. Open *Evidence* to see the bio and posts the reason rests on; each item is a link to that post or profile on X. Nobody is preselected: tick the people you want a draft for. The line at the top gives the estimated cost; *Search details* lists the searches that ran and who was left out and why.
+
+   How people are chosen for scoring: accounts whose name or handle marks them as an organisation, news feed, bot or promotion are dropped first. Everyone else gets a free pre-score from their bio and the posts already read, using two word lists the model writes for the segment (signs that someone does this work, and signs that an account only talks about it) on top of built-in ones. A bio counts more than posts. People are ranked by that pre-score, with "X says you can message them" as a tie-break, and only the top of the list is scored by the model. Accounts that read as clearly off-target are left out and named in *Search details*.
 4. **Draft DMs for selected.** Drafts appear in the review queue as they are written.
 5. **Review queue.** Each draft sits next to its evidence, with a list of the statements it makes about the person and which item backs each one. Edit, approve or skip. A statement the model could not tie to stored evidence is flagged.
 6. **Dashboard.** Approved messages are sent one at a time with a pause between them. You see:
@@ -143,7 +148,7 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 These were measured against the live API on 14 November 2026 with accounts under our control. They shape what the tool can do.
 
 - **A first DM to someone who does not follow you lands in their Message requests.** They have to accept it before it becomes a normal conversation. The tool cannot change that.
-- **Many accounts are closed to DMs from strangers.** X reports this per person, and the tool shows "DMs closed to you" and does not preselect them. In our test with a new, unverified sending account, most people found by search were closed. An established or verified account should reach more people; we could not test that.
+- **Many accounts are closed to DMs from strangers.** X reports this per person, and the tool shows "DMs closed to you" next to their name. In our test with a new, unverified sending account, most people found by search were closed. An established or verified account should reach more people; we could not test that.
 - **Send limits.** X's response headers allowed 1,440 DMs per 24 hours per user. The tool deliberately stays far below that (20 per day by default, 90 seconds apart). X's rules do not allow bulk unsolicited automated DMs; this tool is built for a person approving each message.
 - **Replies typed in the X app are end-to-end encrypted.** The tool can see that a person replied and when, and it can tell a reply apart from merely accepting the request, but it cannot read the text. The dashboard shows "Encrypted reply" with a **Read on X** button. Automatic labelling of replies (interested, question, not interested, opt-out) only works when the text is readable.
 - **The tool does not send through encrypted X Chat.** That would require holding the sender's private keys and Chat passcode on the server, which X's documentation tells third-party servers not to do. Messages are sent with the standard DM endpoint and arrive normally.
@@ -179,7 +184,7 @@ X's pay-per-use prices below come from third-party summaries, not from an offici
 
 Measured in the hosted test: three small campaigns plus a repeat run that found nobody new (16 people scored in total), one draft, one DM and its reply checks came to about **$0.37** by the app's own estimate.
 
-Upper bounds per campaign with default settings: a segment search reads at most 200 posts (about $1.00) and scores at most 30 people; a seed campaign reads at most 100 profiles (about $1.00) plus 5 posts for each of up to 30 people (about $0.75). Typical runs are well below these. Hosting on Railway is about $5 a month.
+Upper bounds per campaign with default settings: a Quick segment search reads at most 60 posts (about $0.30) and scores at most 15 people, about $0.31 in total, which is what a live Quick run measured; a Wide search is about three times that; a seed campaign reads at most 100 profiles (about $1.00) plus 5 posts for each of up to 15 people (about $0.38). Typical runs are well below these. Hosting on Railway is about $5 a month.
 
 ## Limitations and what is not built
 
