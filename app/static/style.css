@@ -581,3 +581,10 @@ a.seed-chip:hover { text-decoration: none; border-color: var(--accent-line); bac
 .segmented.three { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 640px) { .segmented.three { grid-template-columns: 1fr; } }
 .confirm-handle { font-family: var(--mono); padding: 1px 7px; border-radius: 5px; background: var(--red-bg); color: var(--red-fg); user-select: all; }
+
+.skipped-list { display: flex; flex-direction: column; gap: 6px; }
+.skipped-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); font-size: 13.5px; }
+.skipped-row.is-new { margin: 0 0 16px; border-style: dashed; border-color: var(--border-strong); background: var(--surface); }
+.skipped-who { flex: none; }
+.skipped-text { flex: 1; min-width: 0; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skipped-row form { flex: none; margin: 0; }

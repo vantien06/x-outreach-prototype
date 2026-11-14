@@ -116,15 +116,20 @@ def review_card(request: Request, account, outreach_id: int, message: str = "") 
     return templates.TemplateResponse(request, "_review_card.html", {"c": card[0], "message": message, "s": get_settings()})
 
 
-def card_removed(request: Request, account) -> HTMLResponse:
-    """Response for a card that left the review queue: the card itself is replaced by nothing, and the
-    count in the heading and the status block (empty state) are refreshed out of band."""
+def card_removed(request: Request, account, skipped_id: int | None = None) -> HTMLResponse:
+    """Response for a card that left the review queue. The count in the heading and the status block
+    (empty state) are refreshed out of band. An approved card is replaced by nothing; a skipped one by a
+    slim row with an Undo button, because the draft is kept and can be put back."""
     with db() as conn:
         total = conn.execute(
             "SELECT COUNT(*) FROM outreach WHERE account_id=? AND state='drafted'", (account["id"],)).fetchone()[0]
         status = review_status(conn, account["id"])
-    return templates.TemplateResponse(request, "_review_poll.html", {
-        "new_cards": [], "total": total, "oob": True, "poll_oob": True, "s": get_settings(), **status})
+        skipped = load_cards(conn, account["id"], "o.id=? AND o.state='skipped'", (skipped_id,)) if skipped_id else []
+    ctx = {"new_cards": [], "total": total, "oob": True, "poll_oob": True, "s": get_settings(), **status}
+    html = templates.get_template("_review_poll.html").render(ctx)
+    if skipped:
+        html = templates.get_template("_review_skipped_row.html").render({"c": skipped[0], "just_skipped": True}) + html
+    return HTMLResponse(html)
 
 
 def load_cards(conn, account_id: int, where: str, args: tuple = ()) -> list[dict]:
@@ -344,7 +349,7 @@ def campaign_ctx(account, campaign_id: int) -> dict | None:
         # bottom and nothing the viewer is reading moves. Rank by fit once it has finished.
         order = "c.id" if camp["status"] == "discovering" else "c.fit_score IS NULL, c.fit_score DESC, c.id"
         cands = conn.execute(
-            "SELECT c.*, o.state AS outreach_state FROM candidates c LEFT JOIN outreach o"
+            "SELECT c.*, o.state AS outreach_state, o.id AS outreach_id FROM candidates c LEFT JOIN outreach o"
             " ON o.account_id=c.account_id AND o.recipient_x_user_id=c.x_user_id"
             f" WHERE c.campaign_id=? ORDER BY {order}", (campaign_id,)).fetchall()
         out = []
@@ -453,8 +458,9 @@ def review_page(request: Request):
         return login_redirect()
     with db() as conn:
         cards = load_cards(conn, account["id"], "o.state='drafted'")
+        skipped = load_cards(conn, account["id"], "o.state='skipped'")
         status = review_status(conn, account["id"])
-    return render(request, "review.html", account, cards=cards, total=len(cards), **status)
+    return render(request, "review.html", account, cards=cards, total=len(cards), skipped=skipped, **status)
 
 
 def review_status(conn, account_id: int) -> dict:
@@ -504,7 +510,12 @@ def outreach_action(request: Request, outreach_id: int, action: str, text: str =
             message = "Saved."
     elif action == "skip":
         if outreach.human_move(aid, outreach_id, "drafted", "skipped", reason="Skipped by operator.") and htmx:
-            return card_removed(request, account)
+            return card_removed(request, account, skipped_id=outreach_id)
+    elif action == "restore":
+        if outreach.human_move(aid, outreach_id, "skipped", "drafted", reason=""):
+            flash(request, "The draft is back in your review queue.")
+            return RedirectResponse("/review", status_code=303)
+        flash(request, "This draft could not be put back.", "error")
     elif action == "unapprove":
         if not outreach.human_move(aid, outreach_id, "approved", "drafted", approved_at=None):
             flash(request, "This message is already on its way or has been sent, so it cannot be pulled back.", "error")

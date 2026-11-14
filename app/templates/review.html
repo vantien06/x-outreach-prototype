@@ -6,7 +6,7 @@
   <div>
     <h1>Review queue <span class="count" id="review-count" {% if not total %}hidden{% endif %}>{{ total }}</span></h1>
     <p class="sub">Nothing is sent until you approve it. Each draft shows the statements it makes about the person
-      and the bio or post each one comes from. Edit freely; approved messages are sent one at a time, never twice to the same person.</p>
+      and the bio or post each one comes from. Edit freely; approved messages are sent one at a time, never twice to the same person. A skipped draft is kept and can be put back.</p>
   </div>
 </div>
 
@@ -17,4 +17,20 @@
 {% include "_review_card.html" %}
 {% endfor %}
 </div>
+
+{% if skipped %}
+<section class="panel" id="skipped">
+  <div class="panel-head">
+    <div>
+      <h2>Skipped <span class="count">{{ skipped|length }}</span></h2>
+      <p class="sub">Drafts you skipped are kept here. Put one back to review, edit or approve it.</p>
+    </div>
+  </div>
+  <div class="skipped-list">
+  {% for c in skipped %}
+  {% include "_review_skipped_row.html" %}
+  {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

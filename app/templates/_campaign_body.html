@@ -77,7 +77,9 @@
           </div>
         </div>
         <div class="cand-state">
-          {% if c.outreach_state %}{{ badge(c.outreach_state) }}{% elif c.status == 'drafting' %}{{ badge('sending', 'Drafting') }}{% endif %}
+          {% if c.outreach_state == 'skipped' %}{{ badge('skipped') }}<button class="btn sm" formaction="/outreach/{{ c.outreach_id }}/restore" formmethod="post" formnovalidate>Put back in review</button>
+          {% elif c.outreach_state == 'drafted' %}<a class="btn sm" href="/review">Review draft</a>
+          {% elif c.outreach_state %}{{ badge(c.outreach_state) }}{% elif c.status == 'drafting' %}{{ badge('sending', 'Drafting') }}{% endif %}
           {% if c.can_dm == 0 %}{{ badge('bad', 'DMs closed to you', 'X reports this account cannot DM them') }}{% endif %}
           {{ score(c.fit_score, s.fit_threshold) }}
         </div>

@@ -1,0 +1,7 @@
+{% from "_ui.html" import icon, avatar %}
+<div class="skipped-row{% if just_skipped %} is-new{% endif %}">
+  {{ avatar(c.recipient_handle, c.name, '', c.avatar_url) }}
+  <span class="skipped-who"><b>{{ c.name or ('@' ~ c.recipient_handle) }}</b>{% if c.name %} <span class="handle">@{{ c.recipient_handle }}</span>{% endif %}</span>
+  <span class="skipped-text">{% if just_skipped %}Skipped. The draft is kept.{% else %}{{ c.text }}{% endif %}</span>
+  <form method="post" action="/outreach/{{ c.id }}/restore"><button class="btn sm">{{ icon('review', 13) }}{{ 'Undo' if just_skipped else 'Put back in review' }}</button></form>
+</div>
