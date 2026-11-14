@@ -79,8 +79,23 @@
     lastDash = body;
     t.querySelectorAll("details[data-key]").forEach(function (d) { rowState[d.getAttribute("data-key")] = d.open; });
   });
+  // A campaign page refreshes while discovery runs. Skip identical responses and
+  // keep the scroll position, so the text being read does not jump.
+  var lastCamp = null, campScroll = null;
+  document.addEventListener("htmx:beforeSwap", function (e) {
+    var t = e.detail.target;
+    if (!t || t.id !== "campaign") return;
+    var body = e.detail.xhr ? e.detail.xhr.responseText : null;
+    if (body !== null && body === lastCamp) { e.detail.shouldSwap = false; return; }
+    lastCamp = body;
+    campScroll = window.scrollY;
+  });
   document.addEventListener("htmx:afterSwap", function (e) {
     var t = e.detail.target;
+    if (campScroll !== null && document.getElementById("campaign")) {
+      window.scrollTo({ top: campScroll, behavior: "instant" });
+      campScroll = null;
+    }
     if (t && t.id === "dash") {
       t.querySelectorAll("details[data-key]").forEach(function (d) {
         var k = d.getAttribute("data-key");

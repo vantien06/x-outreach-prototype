@@ -43,6 +43,11 @@ async def lifespan(app: FastAPI):
     with db() as conn:
         # Drafting runs in this process; a restart mid-draft must not leave people stuck as "drafting".
         conn.execute("UPDATE candidates SET status='new' WHERE status='drafting'")
+        # Same for discovery: a restart mid-search would otherwise leave the page spinning forever.
+        conn.execute(
+            "UPDATE campaigns SET status='ready', note='Discovery was interrupted by a restart."
+            " People found before that are listed; start a new campaign to search again.'"
+            " WHERE status='discovering'")
     for problem in s.config_problems():
         log.warning("configuration: %s", problem)
     worker = Worker() if s.worker_enabled else None
@@ -322,10 +327,13 @@ def campaign_ctx(account, campaign_id: int) -> dict | None:
         camp = conn.execute("SELECT * FROM campaigns WHERE id=? AND account_id=?", (campaign_id, account["id"])).fetchone()
         if camp is None:
             return None
+        # While discovery is running, list people in arrival order so new ones are added at the
+        # bottom and nothing the viewer is reading moves. Rank by fit once it has finished.
+        order = "c.id" if camp["status"] == "discovering" else "c.fit_score IS NULL, c.fit_score DESC, c.id"
         cands = conn.execute(
             "SELECT c.*, o.state AS outreach_state FROM candidates c LEFT JOIN outreach o"
             " ON o.account_id=c.account_id AND o.recipient_x_user_id=c.x_user_id"
-            " WHERE c.campaign_id=? ORDER BY c.fit_score IS NULL, c.fit_score DESC, c.id", (campaign_id,)).fetchall()
+            f" WHERE c.campaign_id=? ORDER BY {order}", (campaign_id,)).fetchall()
         out = []
         for c in cands:
             ev = conn.execute("SELECT * FROM evidence WHERE candidate_id=? ORDER BY kind, id", (c["id"],)).fetchall()
