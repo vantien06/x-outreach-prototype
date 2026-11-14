@@ -28,14 +28,18 @@ QUERY_SYSTEM = """You turn a description of a target audience into search querie
 
 The right kind of person is an individual who personally builds, founds or researches in the described area and is talking about their own work. The wrong kind is everything that merely talks about the area: news and curation accounts, newsletters, event and conference pages, exchanges and token projects, course sellers, recruiters, giveaways and hype threads. Those accounts use the same topic words, so a query made only of topic words returns mostly them.
 
-Write 4 or 5 queries, most important first, because a quick search runs only the first three:
-1. to 3. First-person work queries. Each ANDs one group of first-person builder phrases with one group of the area's specific terms. Vary both groups between the three so they reach different people. Builder phrases are things a person says about their own work, for example "I'm building", "we're building", "I built", "we shipped", "just shipped", "my startup", "our beta", "working on", "side project", "open-sourced". Area terms are the tools, methods and nouns practitioners of this area use.
+Write 5 queries, most important first, because a quick search runs only the first three. If the audience names a region, queries 2 and 3 must be the two region queries described below, and the remaining first-person work queries come after them; a search that never looks for the region finds builders who are almost all somewhere else.
+
+First-person work queries (queries 1 to 3 when no region is named; query 1 and then 4 when one is). Each ANDs one group of first-person builder phrases with one group of the area's specific terms. Vary both groups between the three so they reach different people. Builder phrases are things a person says about their own work, for example "I'm building", "we're building", "I built", "we shipped", "just shipped", "my startup", "our beta", "working on", "side project", "open-sourced". Area terms are the tools, methods and nouns practitioners of this area use.
 4. A role query: self-described roles ("founder", "co-founder", "CTO", "research engineer", "PhD student") ANDed with the area's specific terms.
-5. Only if the audience names a region: one query that ANDs first-person builder phrases with cities or countries of that region. The other queries must not mention places: where a person is based is checked later from their profile, and most people do not name their city in a post.
+Region queries, only if the audience names a region:
+- Place query: the area's specific terms ANDed with a group of the region's countries and major cities ("Singapore" OR "Jakarta" OR "Ho Chi Minh" OR "Vietnam" ...). Do not add a builder-phrase group here; two groups only.
+- Local-language query: the area's specific terms (in the forms people there actually type, which are often the English technical terms) restricted with lang: to one widely used local language of the region, for example lang:id, lang:vi or lang:th, instead of lang:en. Pick the language with the most builders on X. A post in that language is strong evidence the author is from the region.
+Where a person is based is still checked later from their profile, so the other queries must not mention places.
 
 Rules for every query:
-- Use only these operators: plain keywords, "quoted phrases", OR, parentheses for grouping, a leading minus to exclude a term, #hashtags, lang:en, -is:retweet, -is:reply. Other operators are not available.
-- Words separated by spaces are ANDed. Use exactly two ANDed groups besides the exclusions and the -is: filters; put alternatives inside one group with OR.
+- Use only these operators: plain keywords, "quoted phrases", OR, parentheses for grouping, a leading minus to exclude a term, #hashtags, lang: with one language code (lang:en unless told otherwise above), -is:retweet, -is:reply. Other operators are not available.
+- Words separated by spaces are ANDed. Use exactly two ANDed groups besides lang:, the exclusions and the -is: filters (the local-language query has one group plus lang:); put alternatives inside one group with OR.
 - Never write a query that is only topic words or only hashtags.
 - You may exclude up to three words that mark the wrong kind of account for this area, for example -giveaway -airdrop -hiring.
 - End every query with -is:retweet. Add -is:reply to at most two of them.
