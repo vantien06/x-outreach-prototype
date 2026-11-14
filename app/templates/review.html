@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, empty %}
+{% block title %}Review queue · Warm Outreach{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Review queue {% if cards %}<span class="count">{{ cards|length }}</span>{% endif %}</h1>
+    <p class="sub">Nothing is sent until you approve it. Each draft shows the statements it makes about the person
+      and the bio or post each one comes from. Edit freely; approved messages are sent one at a time, never twice to the same person.</p>
+  </div>
+</div>
+
+{% if not cards %}
+<section class="panel">
+  {% if undrafted %}
+  {{ empty("No drafts waiting", undrafted ~ " good-fit people have no draft yet; open a campaign to draft for them.", 'review') }}
+  <p class="empty-action"><a class="btn" href="/#campaigns">Go to campaigns</a></p>
+  {% else %}
+  {{ empty("No drafts waiting", "Drafts appear here after you pick people in a campaign. If you just asked for drafts, refresh in a few seconds.", 'review') }}
+  {% endif %}
+</section>
+{% endif %}
+
+{% for c in cards %}
+{% include "_review_card.html" %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, empty, badge %}
+{% block title %}Settings · Warm Outreach{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="sub">Connected account, limits and estimated cost.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <div>
+      <h2>How sending works on X</h2>
+      <p class="sub">Checked against the live X API on 14 Nov 2026. These are rules of X, not settings of this tool.</p>
+    </div>
+  </div>
+  <ul class="facts">
+    <li><strong>Set up X Chat on the sending account first.</strong> Open Messages on x.com as @{{ account.handle }} and finish the passcode step once. In our test, messages sent before that step only showed up for the recipient afterwards.</li>
+    <li><strong>First messages land in Message requests.</strong> If the recipient does not follow you, your DM waits in their Requests tab until they accept. Some people never look there.</li>
+    <li><strong>X can refuse a DM.</strong> If the recipient does not accept requests from accounts like yours, X rejects it. The message is marked Blocked with the reason and is never retried.</li>
+    <li><strong>Replies are encrypted.</strong> This tool sees who replied and when, and shows "Replied (encrypted)". Read and answer the reply in the conversation on X; each reply here links straight to it.</li>
+    <li><strong>One message per person, ever.</strong> If this account already has a conversation with someone, nothing is sent to them.</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Account and limits</h2></div>
+  <dl class="kv">
+    <div><dt>Connected account</dt><dd><b>@{{ account.handle }}</b> <span class="muted">X user id {{ account.x_user_id }}</span></dd></div>
+    <div><dt>Mode</dt><dd><span class="chip">{{ s.app_mode }}</span>{% if s.dry_run %} <span class="chip warn">dry run</span>{% endif %}</dd></div>
+    <div><dt>Daily send limit</dt><dd>{{ usage.sends_today }} / {{ usage.send_cap }} today (UTC)</dd></div>
+    <div><dt>Pause between sends</dt><dd>{{ s.send_spacing_seconds|int }} seconds{% if s.dry_run %} <span class="muted">(shortened to 3 in dry run)</span>{% endif %}</dd></div>
+    <div><dt>Reply checks</dt><dd>each sent conversation is checked every 2 minutes in its first hour, then less often; at most {{ s.chat_reads_per_15min }} checks per 15 minutes <span class="muted">(X allows 100)</span></dd></div>
+    <div><dt>Daily candidate limit</dt><dd>{% if usage.candidate_cap %}{{ usage.candidates_today }} / {{ usage.candidate_cap }} today{% else %}none{% endif %}</dd></div>
+    <div><dt>Budget ceiling (all users)</dt><dd>{% if usage.global_budget %}${{ "%.2f"|format(usage.global_spent) }} of ${{ "%.2f"|format(usage.global_budget) }} estimated{% else %}none{% endif %}</dd></div>
+    <div><dt>Models</dt><dd>drafting: <code>{{ s.draft_model }}</code> · scoring and reply labels: <code>{{ s.fast_model }}</code></dd></div>
+  </dl>
+  <p class="muted foot-note">Limits are set by whoever runs this deployment, in its environment variables.</p>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Usage and estimated cost for this account</h2></div>
+  {% if not usage.rows %}
+  {{ empty("No usage yet", "Discovery, drafting and sending are logged here with their estimated cost.", 'clock') }}
+  {% else %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Kind</th><th class="num">Units</th><th class="num">Estimated cost</th></tr></thead>
+    <tbody>
+    {% for r in usage.rows %}<tr><td data-label="Kind"><code>{{ r.kind }}</code></td><td data-label="Units" class="num">{{ r.u }} units</td><td data-label="Estimated cost" class="num">${{ "%.3f"|format(r.c) }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+  <p class="muted foot-note">Costs are estimates from configured unit prices, not X's or Anthropic's invoice. Dry run costs nothing.</p>
+</section>
+
+<section class="panel danger-zone">
+  <div class="panel-head"><h2>Disconnect and delete my data</h2></div>
+  <p>Revokes this app's access to your X account and deletes your campaigns, candidates, drafts, sent log and stored
+    tokens. One thing is kept: an unreadable fingerprint of each person already messaged, so that reconnecting later
+    can never message them a second time.</p>
+  <form method="post" action="/account/delete" class="confirm-row">
+    <input name="confirm" placeholder="type {{ account.handle }} to confirm" autocomplete="off" aria-label="Type your handle to confirm">
+    <button class="btn danger">Disconnect and delete</button>
+  </form>
+</section>
+{% endblock %}

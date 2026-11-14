@@ -1,0 +1,65 @@
+{% from "_ui.html" import icon, badge, avatar, score %}
+<section class="panel card review-card">
+  <header class="review-head">
+    {{ avatar(c.recipient_handle, c.name, 'lg') }}
+    <div class="cand-id">
+      <a class="who" href="https://x.com/{{ c.recipient_handle }}" target="_blank" rel="noopener"><b>{{ c.name or c.recipient_handle }}</b> <span class="handle">@{{ c.recipient_handle }}</span></a>
+      <div class="cand-meta">
+        <span>{{ c.campaign_name }}</span>
+        <span class="sep" aria-hidden="true">·</span>
+        <span>{{ "{:,}".format(c.followers) }} followers</span>
+      </div>
+    </div>
+    <div class="cand-state">
+      {% if c.can_dm == 0 %}{{ badge('bad', 'DMs closed to you: X will likely refuse this') }}{% endif %}
+      {% if c.edited %}{{ badge('question', 'Edited by you') }}{% endif %}
+      {{ score(c.fit_score, s.fit_threshold) }}
+    </div>
+  </header>
+
+  <div class="two">
+    <form class="draft">
+      <div class="draft-label">
+        <label for="draft-{{ c.id }}">Message draft</label>
+        <span class="char-count" data-count-for="draft-{{ c.id }}">{{ c.text|length }} / 1000</span>
+      </div>
+      <textarea id="draft-{{ c.id }}" name="text" rows="9" maxlength="1000" data-count>{{ c.text }}</textarea>
+      {% if message %}<p class="inline-msg {% if message == 'Saved.' %}good{% else %}bad{% endif %}" role="status">{{ icon('check' if message == 'Saved.' else 'alert', 14) }}{{ message }}</p>{% endif %}
+      {% if c.grounding_note %}<p class="callout bad">{{ icon('alert', 14) }}{{ c.grounding_note }}</p>{% endif %}
+      {% if c.claim_list %}
+      <div class="claims">
+        <h3>What this draft says about them</h3>
+        <ul>
+          {% for cl in c.claim_list %}<li data-claim="{{ cl.evidence_id }}"><span>{{ cl.claim }}</span><span class="ev-ref" title="Backed by evidence {{ cl.evidence_id }}">{{ cl.evidence_id }}</span></li>{% endfor %}
+        </ul>
+        {% if c.edited %}<p class="muted">You edited the text, so this list may no longer match it.</p>{% endif %}
+      </div>
+      {% endif %}
+      <div class="draft-actions">
+        <button class="btn primary" hx-post="/outreach/{{ c.id }}/approve" hx-target="closest .card" hx-swap="outerHTML">{{ icon('check', 15) }}Approve and queue</button>
+        <button class="btn" hx-post="/outreach/{{ c.id }}/save" hx-target="closest .card" hx-swap="outerHTML">Save edit</button>
+        <span class="spacer"></span>
+        <button class="btn ghost" hx-post="/outreach/{{ c.id }}/skip" hx-target="closest .card" hx-swap="outerHTML">Skip this person</button>
+      </div>
+    </form>
+
+    <aside class="proof" aria-label="Evidence">
+      <h3>Why they fit</h3>
+      <p class="cand-reason">{{ c.fit_reason }}</p>
+      <h3>Evidence on file</h3>
+      {% if c.evidence %}
+      <ul class="evidence">
+        {% for e in c.evidence %}
+        <li class="ev" data-evidence="E{{ e.id }}">
+          <span class="ev-kind"><b>E{{ e.id }}</b> {{ e.kind }}</span>
+          <span class="ev-text">{{ e.text }}</span>
+          {% if e.url %}<span class="ev-foot"><a href="{{ e.url }}" target="_blank" rel="noopener">source{{ icon('external', 11) }}</a></span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No evidence stored for this person.</p>
+      {% endif %}
+    </aside>
+  </div>
+</section>

@@ -1,0 +1,36 @@
+Hi there,
+
+Thank you for applying for the Forward Deployed Engineer role at GenAI Fund.
+
+We value bias for action and practical skills, so we approach hiring a little differently. This assignment gives you a feel for our work and a chance to demonstrate your approach beyond your CV. We want to understand how you think, make choices and build something that works—through a problem that reflects the hands-on work of the role.
+
+The next step is a take-home assignment: build a working prototype we can use to find relevant AI and robotics people on X/Twitter and run personalised DM outreach to start real conversations.
+
+This is a hiring exercise, not a request to run an outreach campaign for us. You do not need to contact strangers or generate leads for GenAI Fund: demonstrate sending using accounts you control or people who have agreed to the test. Keep the scope narrow—a usable prototype with clear trade-offs is better than a broad, unfinished system. We are interested in your thinking and practical choices, not a production-ready product.
+
+Please read the full brief below.
+
+This is a hiring exercise, not a request to run an outreach campaign for us. You do not need to contact strangers or generate leads for GenAI Fund: demonstrate sending using accounts you control or people who have agreed to the test. Keep the scope narrow—a usable prototype with clear trade-offs is better than a broad, unfinished system. We are interested in your thinking and practical choices, not a production-ready product.
+GenAI Fund – FDE Take-Home Assignment
+The goal
+Build a WORKING PROTOTYPE that GenAI Fund can actually use to find the right AI and robotics people on X, run warm, personalised DM outreach from our account, and get real conversations started. We build AI ecosystems in Southeast Asia and want to reach relevant people at scale without losing the personal touch. This must be a usable tool we can run ourselves—not a mockup, slide deck or demo-only experience. You choose the approach and tools.
+Who we want to reach
+AI and robotics builders, founders and researchers: people working on AI models, applications, developer tools, infrastructure, robotics or embodied AI. We care about relevant individuals and meaningful conversations, not the biggest contact list.
+What ‘working’ means
+We give it a target segment or seed accounts. It finds people and explains why they fit, drafts personalised DMs for us to review and approve, and sends approved messages from our connected account within X’s rules and limits. It never double-messages anyone and shows us what was sent, who replied and what needs our attention. Personalisation should use real evidence, not invented familiarity.
+
+We should be able to use it without you beside us. Make limitations and blocked actions clear. A narrow, reliable version is better than a broad, unfinished one.
+What to send us
+Your working prototype: a hosted link, or source code with clear setup we can complete in under 15 minutes. State any account, API-access or plan requirements; we will connect our own authorised accounts and keys.
+A 3–5 minute demo video: show it working end to end and be clear about anything unfinished.
+A one-page write-up: your approach, trade-offs, what comes next, costs, and how you used AI tools and checked their output.
+Ground rules
+Use your own or test X accounts. Test real sending only with accounts you control or people who have agreed to the test—not unsolicited outreach to strangers. Follow X’s terms, API access rules and rate limits; no prohibited scraping or bypassing restrictions. Do not share credentials with us or include secrets in your submission. Keep costs low and name any paid tools and expected operating costs.
+How we evaluate
+If we can’t use it to run outreach ourselves, it doesn’t pass. We look for relevant targeting, thoughtful personalisation, ease of use, reliable tracking without duplicate messages, and good judgment about platform rules, failures and cost. Explain your choices clearly; polish cannot substitute for a working tool.
+
+Confirm participation: Reply to hr@genaifund.ai by Friday 13 November 2026, 12:00 PM (GMT+7), confirming that you’ll take on the assignment.
+
+Deadline: Submit to hr@genaifund.ai by Tuesday 17 November 2026, 12:00 PM (GMT+7)
+
+Questions: email hr@genaifund.ai

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon %}
+{% block content %}
+<section class="hero">
+  <div class="brand hero-brand">
+    <span class="brand-mark" aria-hidden="true">{{ icon('send', 15) }}</span>
+    <span class="brand-name">Warm Outreach</span>
+  </div>
+  <h1>Find the right AI and robotics people on X, and start real conversations</h1>
+  <p class="lead">Give it a target segment or seed accounts. It finds people and shows why they fit, drafts a DM from what they
+    actually posted, and sends only the messages you approve, one person at most once.</p>
+
+  <ol class="steps">
+    <li><span class="step-n">1</span><div><b>Find</b><span>People matching your segment, each with the bio or posts that explain the fit.</span></div></li>
+    <li><span class="step-n">2</span><div><b>Review</b><span>A draft per person, next to the evidence it is built on. You edit and approve.</span></div></li>
+    <li><span class="step-n">3</span><div><b>Send and track</b><span>Approved messages go out slowly, never twice. Replies and blocked sends are listed for you.</span></div></li>
+  </ol>
+
+  <div class="hero-cta">
+    {% if s.dry_run %}
+    <a class="btn primary big" href="/auth/login">Enter dry run</a>
+    <p class="muted">Dry run uses fictional sample people. To go live, set <code>DRY_RUN=false</code> and add your keys.</p>
+    {% else %}
+    <a class="btn primary big" href="/auth/login">Sign in with X</a>
+    <p class="muted">You will be asked to let this app read posts and profiles, and read and send Direct Messages
+      on your behalf. Your X password is never shared with this app.
+      {% if s.app_mode == "hosted" %}This deployment only accepts allowlisted handles.{% endif %}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

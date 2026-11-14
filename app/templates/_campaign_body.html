@@ -1,0 +1,93 @@
+{% from "_ui.html" import icon, badge, avatar, empty, score %}
+<div id="campaign" {% if camp.status == 'discovering' %}hx-get="/campaigns/{{ camp.id }}" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+<div class="page-head">
+  <div>
+    <p class="crumb"><a href="/#campaigns">Campaigns</a> <span aria-hidden="true">/</span></p>
+    <h1>{{ camp.name }} {{ badge(camp.status) }}</h1>
+    <p class="sub">
+      {% if camp.mode == 'segment' %}<b>Target segment:</b> {{ camp.segment }}{% else %}<b>Seed accounts:</b> {{ camp.seeds }}{% endif %}
+    </p>
+  </div>
+  <div class="page-actions">
+    <a class="btn" href="/review">{{ icon('review') }}Review queue</a>
+  </div>
+</div>
+
+{% if camp.status == 'discovering' %}
+<div class="notice info" role="status"><span class="spinner" aria-hidden="true"></span><span>Finding and scoring people. This page updates by itself.</span></div>
+{% elif camp.status == 'failed' %}
+<div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Discovery stopped:</strong> {{ camp.note }}</span></div>
+{% elif camp.note %}
+<div class="notice info">{{ icon('info') }}<span>{{ camp.note }}</span></div>
+{% endif %}
+
+{% if cands %}
+<form method="post" action="/campaigns/{{ camp.id }}/draft" class="cand-form">
+<section class="panel flush">
+  <div class="toolbar">
+    <div>
+      <h2>{{ cands|length }} {{ 'person' if cands|length == 1 else 'people' }} found</h2>
+      <p class="sub">People scoring {{ s.fit_threshold }} or more are preselected. Every reason links to the bio or post it is based on.</p>
+    </div>
+    {% if camp.status != 'discovering' %}
+    <div class="toolbar-actions">
+      <span class="sel-count" data-sel-count aria-live="polite"></span>
+      <button class="btn primary">{{ icon('review') }}Draft DMs for selected</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="cands">
+  {% for c in cands %}
+  {% set selectable = (not c.outreach_state) and c.status in ('new', 'draft_failed') and c.fit_score is not none and camp.status != 'discovering' %}
+  <article class="cand {% if c.fit_score is not none and c.fit_score < s.fit_threshold %}is-low{% endif %}">
+    <div class="cand-pick">
+      {% if selectable %}
+      <input type="checkbox" name="candidate_id" value="{{ c.id }}" id="cand-{{ c.id }}" aria-label="Select {{ c.name or c.handle }}" {% if c.fit_score >= s.fit_threshold and c.can_dm != 0 %}checked{% endif %}>
+      {% endif %}
+    </div>
+    {{ avatar(c.handle, c.name, 'lg') }}
+    <div class="cand-main">
+      <div class="cand-head">
+        <div class="cand-id">
+          <a class="who" href="https://x.com/{{ c.handle }}" target="_blank" rel="noopener"><b>{{ c.name or c.handle }}</b> <span class="handle">@{{ c.handle }}</span></a>
+          <div class="cand-meta">
+            {% if c.fit_category %}<span class="chip">{{ c.fit_category }}</span>{% endif %}
+            <span>{{ "{:,}".format(c.followers) }} followers</span>
+            <span class="sep" aria-hidden="true">·</span>
+            <span>{{ c.source }}</span>
+          </div>
+        </div>
+        <div class="cand-state">
+          {% if c.outreach_state %}{{ badge(c.outreach_state) }}{% endif %}
+          {% if c.can_dm == 0 %}{{ badge('bad', 'DMs closed to you', 'X reports this account cannot DM them') }}{% endif %}
+          {{ score(c.fit_score, s.fit_threshold) }}
+        </div>
+      </div>
+      <p class="cand-reason">{{ c.fit_reason or 'Not scored yet.' }}</p>
+      {% if c.evidence %}
+      <ul class="evidence">
+        {% for e in c.evidence %}
+        <li class="ev {% if e.cited %}cited{% endif %}">
+          <span class="ev-kind">{{ e.kind }}</span>
+          <span class="ev-text">{{ e.text }}</span>
+          <span class="ev-foot">
+            {% if e.cited %}<span class="ev-cited">{{ icon('check', 12) }}Used for the fit reason</span>{% endif %}
+            {% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener">source{{ icon('external', 11) }}</a>{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</section>
+</form>
+{% elif camp.status != 'discovering' %}
+<section class="panel">
+  {{ empty("Nobody new to show", "People already found by another campaign are not listed twice. Otherwise, try a broader segment or different seed accounts; search only covers recent posts.", 'search') }}
+</section>
+{% endif %}
+</div>

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, badge, empty %}
+{% block title %}Campaigns · Warm Outreach{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Campaigns</h1>
+    <p class="sub">Each campaign is one search for people: a target segment or a set of seed accounts.</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn primary" href="/#new-campaign">{{ icon('plus') }}New campaign</a>
+  </div>
+</div>
+
+<section class="panel">
+  {% if not campaigns %}
+  {{ empty("No campaigns yet", "Create one to find your first people.", 'campaigns') }}
+  {% else %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Campaign</th><th>Found by</th><th class="num">People</th><th class="num">Drafts to review</th><th class="num">Sent</th><th class="num">Replied</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for k in campaigns %}
+    <tr>
+      <td data-label="Campaign"><a class="who" href="/campaigns/{{ k.id }}">{{ k.name }}</a><div class="muted">{{ k.created_at|short }}</div></td>
+      <td data-label="Found by">{{ 'Target segment' if k.mode == 'segment' else 'Seed accounts' }}</td>
+      <td data-label="People" class="num">{{ k.n }}</td>
+      <td data-label="Drafts to review" class="num">{% if k.n_drafted %}<a href="/review">{{ k.n_drafted }}</a>{% else %}0{% endif %}</td>
+      <td data-label="Sent" class="num">{{ k.n_sent }}</td>
+      <td data-label="Replied" class="num">{{ k.n_replied }}</td>
+      <td data-label="Status">{{ badge(k.status) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

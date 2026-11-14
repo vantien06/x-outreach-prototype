@@ -1,0 +1,199 @@
+{% from "_ui.html" import icon, badge, avatar, empty %}
+{% set c = d.counts %}
+{% set u = d.usage %}
+
+<section class="stats" aria-label="Overview">
+  <a class="stat {% if d.attention %}hot{% endif %}" href="#attention">
+    <span class="stat-label">{{ icon('alert', 14) }}Needs attention</span>
+    <b class="stat-num">{{ d.attention }}</b>
+    <span class="stat-foot">replies and unclear sends</span>
+  </a>
+  <a class="stat" href="/review">
+    <span class="stat-label">{{ icon('review', 14) }}Drafts to review</span>
+    <b class="stat-num">{{ c.get('drafted', 0) }}</b>
+    <span class="stat-foot">waiting for your approval</span>
+  </a>
+  <a class="stat" href="#queue">
+    <span class="stat-label">{{ icon('clock', 14) }}Queued</span>
+    <b class="stat-num">{{ c.get('approved', 0) + c.get('sending', 0) }}</b>
+    <span class="stat-foot">approved, waiting to send</span>
+  </a>
+  <a class="stat" href="#sent">
+    <span class="stat-label">{{ icon('send', 14) }}Sent</span>
+    <b class="stat-num">{{ c.get('sent', 0) }}</b>
+    <span class="stat-foot">delivered to X</span>
+  </a>
+  <a class="stat" href="#sent">
+    <span class="stat-label">{{ icon('inbox', 14) }}Replied</span>
+    <b class="stat-num">{{ d.replied }}</b>
+    <span class="stat-foot">{% if c.get('sent', 0) %}{{ (100 * d.replied / c.get('sent', 0))|round|int }}% of sent{% else %}no sends yet{% endif %}</span>
+  </a>
+  <a class="stat" href="#blocked">
+    <span class="stat-label">{{ icon('block', 14) }}Blocked</span>
+    <b class="stat-num">{{ c.get('blocked', 0) }}</b>
+    <span class="stat-foot">not sent, reason shown below</span>
+  </a>
+</section>
+
+<div class="limits">
+  <span class="limit"><span class="limit-k">Sends today</span><b>{{ u.sends_today }} / {{ u.send_cap }}</b></span>
+  {% if u.candidate_cap %}<span class="limit"><span class="limit-k">Candidates scored today</span><b>{{ u.candidates_today }} / {{ u.candidate_cap }}</b></span>{% endif %}
+  {% if u.global_budget %}<span class="limit"><span class="limit-k">Estimated spend</span><b>${{ "%.2f"|format(u.global_spent) }} of ${{ "%.2f"|format(u.global_budget) }}</b></span>{% endif %}
+  {% if u.locked %}<span class="limit bad">{{ icon('alert', 14) }}Budget ceiling reached: discovery, drafting and sending are locked.</span>{% endif %}
+  {% if u.sends_today >= u.send_cap %}<span class="limit bad">{{ icon('alert', 14) }}Daily send limit reached; the queue resumes tomorrow (UTC).</span>{% endif %}
+</div>
+{% if account.last_poll_error %}<div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Reply tracking:</strong> {{ account.last_poll_error }}</span></div>{% endif %}
+
+<section class="panel attention {% if d.attention %}has-items{% endif %}" id="attention">
+  <div class="panel-head">
+    <h2>Needs your attention {% if d.attention %}<span class="count">{{ d.attention }}</span>{% endif %}</h2>
+  </div>
+  {% if not d.replies_open and not d.needs_check %}
+  {{ empty("You're all caught up", "New replies and sends that need a manual check show up here.", 'check') }}
+  {% endif %}
+  <div class="list">
+  {% for r in d.replies_open %}
+  <article class="row-item">
+    <div class="row-head">
+      {{ avatar(r.recipient_handle, r.recipient_name) }}
+      <div class="row-title">
+        <a class="who" href="https://x.com/{{ r.recipient_handle }}" target="_blank" rel="noopener">{% if r.recipient_name %}{{ r.recipient_name }} {% endif %}@{{ r.recipient_handle }}</a>
+        <span class="muted">{{ 'activity' if r.label == 'unknown' else 'replied' }} · {{ r.event_at|short }}</span>
+      </div>
+      {{ badge(r.label or 'reply') }}
+    </div>
+    {% if r.label == 'encrypted' %}
+    <p class="callout info">{{ icon('info', 14) }}<span><strong>Replied (encrypted): open on X to read.</strong> Replies typed in the X app are end-to-end encrypted, so this tool can see that they answered and when, but not what they wrote.</span></p>
+    {% elif r.label == 'unknown' %}
+    <p class="callout info">{{ icon('info', 14) }}<span><strong>Activity from recipient: open on X.</strong> Something happened in this conversation that this tool could not identify as a message.</span></p>
+    {% else %}
+    <blockquote class="reply">{{ r.text }}</blockquote>
+    {% if r.summary %}<p class="muted">{{ r.summary }}</p>{% endif %}
+    {% endif %}
+    {% if r.label == 'opt_out' %}<p class="callout bad">{{ icon('block', 14) }}Asked not to be contacted. This tool will never message them again.</p>{% endif %}
+    <details data-key="reply-{{ r.id }}"><summary>Your message</summary><p class="pre msg">{{ r.our_text }}</p></details>
+    <div class="actions">
+      <a class="btn{% if r.label in ('encrypted', 'unknown') %} primary{% endif %}" href="{{ chat_url(r, account) }}" target="_blank" rel="noopener">{{ 'Open conversation on X' if r.label in ('encrypted', 'unknown') else 'Open conversation on X to reply' }}{{ icon('external', 13) }}</a>
+      <form method="post" action="/replies/{{ r.id }}/handled"><button class="btn ghost">{{ icon('check', 14) }}Mark handled</button></form>
+    </div>
+  </article>
+  {% endfor %}
+  {% for o in d.needs_check %}
+  <article class="row-item">
+    <div class="row-head">
+      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      <div class="row-title">
+        <a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</a>
+        <span class="muted">delivery unknown</span>
+      </div>
+      {{ badge('needs_check', 'Check on X') }}
+    </div>
+    <p class="reason">{{ o.reason }}</p>
+    <details data-key="check-{{ o.id }}"><summary>Message</summary><p class="pre msg">{{ o.text }}</p></details>
+    <div class="actions">
+      <a class="btn" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener">Open conversation on X{{ icon('external', 13) }}</a>
+      <form method="post" action="/outreach/{{ o.id }}/delivered"><button class="btn">{{ icon('check', 14) }}It was delivered</button></form>
+      <form method="post" action="/outreach/{{ o.id }}/not-delivered"><button class="btn">It was not delivered, queue it again</button></form>
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</section>
+
+{% if d.blocked %}
+<section class="panel" id="blocked">
+  <div class="panel-head">
+    <div>
+      <h2>Blocked, not sent <span class="count">{{ d.blocked|length }}</span></h2>
+      <p class="sub">Nothing was delivered to these people, and the tool will not retry.</p>
+    </div>
+  </div>
+  <div class="list">
+  {% for o in d.blocked %}
+  <article class="row-item compact">
+    <div class="row-head">
+      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      <div class="row-title">
+        <a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</a>
+        <span class="reason-inline">{{ o.reason }}</span>
+      </div>
+      {{ badge('blocked') }}
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if d.queue %}
+<section class="panel" id="queue">
+  <div class="panel-head">
+    <div>
+      <h2>Approved, waiting to send <span class="count">{{ d.queue|length }}</span></h2>
+      <p class="sub">Sent one at a time with a pause between messages{% if account.paused %} (currently stopped){% endif %}.</p>
+    </div>
+  </div>
+  <div class="list">
+  {% for o in d.queue %}
+  <article class="row-item compact">
+    <div class="row-head">
+      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      <div class="row-title">
+        <span class="who">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</span>
+        {% if o.reason %}<span class="reason-inline muted">{{ o.reason }}</span>{% endif %}
+      </div>
+      {{ badge(o.state) }}
+      {% if o.state == 'approved' %}<form method="post" action="/outreach/{{ o.id }}/unapprove" class="inline"><button class="btn ghost sm">Back to drafts</button></form>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="panel" id="sent">
+  <div class="panel-head">
+    <div>
+      <h2>Sent {% if d.sent %}<span class="count">{{ d.sent|length }}</span>{% endif %}</h2>
+      <p class="sub">A first message to someone who does not follow you lands in their <strong>Message requests</strong> on X until they accept it. Replies typed in the X app are encrypted: you see who replied here and read the text on X.</p>
+    </div>
+  </div>
+  {% if not d.sent %}
+  {{ empty("Nothing sent yet", "Messages you approve appear here once they are delivered.", 'send') }}
+  {% else %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Person</th><th>Sent</th><th>Message</th><th>Reply</th></tr></thead>
+    <tbody>
+    {% for o in d.sent %}
+    <tr>
+      <td data-label="Person"><span class="cell-person">{{ avatar(o.recipient_handle, o.recipient_name, 'sm') }}<span><a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">@{{ o.recipient_handle }}</a>{% if o.recipient_name %} <span class="muted">{{ o.recipient_name }}</span>{% endif %}</span></span></td>
+      <td data-label="Sent" class="muted nowrap">{{ o.sent_at|short }}</td>
+      <td data-label="Message"><details data-key="sent-{{ o.id }}"><summary>{{ o.text[:70] }}…</summary><p class="pre msg">{{ o.text }}</p></details></td>
+      <td data-label="Reply">{% if o.reply_event %}{{ badge(o.reply_label or 'reply', title='The recipient was active in the conversation (for example accepted your message request) but has not sent a message.' if o.reply_label == 'activity' else None) }} <a class="muted" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener" title="Open this conversation on X">open{{ icon('external', 12) }}</a>{% else %}<span class="muted">No reply yet</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel" id="campaigns">
+  <div class="panel-head">
+    <h2>Campaigns {% if d.campaigns %}<span class="count">{{ d.campaigns|length }}</span>{% endif %}</h2>
+    <span class="page-actions"><a class="btn ghost sm" href="/campaigns">All campaigns</a><a class="btn sm" href="#new-campaign">{{ icon('plus', 13) }}New campaign</a></span>
+  </div>
+  {% if not d.campaigns %}
+  {{ empty("No campaigns yet", "Create one below to find your first people.", 'campaigns') }}
+  {% endif %}
+  <div class="list">
+  {% for k in d.campaigns %}
+  <a class="row-link" href="/campaigns/{{ k.id }}">
+    <span class="row-link-main"><b>{{ k.name }}</b><span class="muted">{{ 'Target segment' if k.mode == 'segment' else 'Seed accounts' }} · {{ k.n }} {{ 'person' if k.n == 1 else 'people' }}</span></span>
+    {{ badge(k.status) }}
+    <span class="chev" aria-hidden="true">›</span>
+  </a>
+  {% endfor %}
+  </div>
+</section>

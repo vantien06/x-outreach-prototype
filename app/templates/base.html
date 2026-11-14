@@ -1,0 +1,94 @@
+{% from "_ui.html" import icon, avatar %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Warm Outreach{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231a1a17'/%3E%3Cpath d='M23 9 14.5 17.5M23 9l-5 14-3.5-5.5L9 14z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+{% set path = request.url.path %}
+<body class="{% if account %}has-shell{% else %}no-shell{% endif %}">
+<a class="skip-link" href="#main">Skip to content</a>
+
+{% if s.dry_run %}
+<div class="banner dry" role="status">
+  <span class="banner-pill">Dry run</span>
+  <span>Sample fictional people, simulated sends and replies. Nothing is sent to X and no API is called.</span>
+</div>
+{% endif %}
+{% for p in problems %}
+<div class="banner error" role="alert">{{ icon('alert') }}<span><strong>Configuration:</strong> {{ p }}</span></div>
+{% endfor %}
+
+{% if account %}
+<div class="shell">
+  <aside class="side">
+    <div class="side-top">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">{{ icon('send', 15) }}</span>
+        <span class="brand-name">Warm Outreach</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/" class="{% if path == '/' %}active{% endif %}" {% if path == '/' %}aria-current="page"{% endif %}>{{ icon('dashboard') }}<span>Dashboard</span></a>
+        <a href="/campaigns" class="{% if path.startswith('/campaigns') %}active{% endif %}" {% if path.startswith('/campaigns') %}aria-current="page"{% endif %}>{{ icon('campaigns') }}<span>Campaigns</span></a>
+        <a href="/review" class="{% if path.startswith('/review') %}active{% endif %}" {% if path.startswith('/review') %}aria-current="page"{% endif %}>{{ icon('review') }}<span>Review queue</span></a>
+        <a href="/settings" class="{% if path.startswith('/settings') %}active{% endif %}" {% if path.startswith('/settings') %}aria-current="page"{% endif %}>{{ icon('settings') }}<span>Settings</span></a>
+      </nav>
+    </div>
+
+    <div class="side-bottom">
+      <div class="side-live" hx-get="/partials/side" hx-trigger="every 20s" hx-swap="innerHTML" aria-live="off">{% include "_side_live.html" %}</div>
+
+      <div class="side-send {% if account.paused %}is-paused{% endif %}">
+        <div class="side-send-state">
+          <i class="pulse" aria-hidden="true"></i>
+          <span>{% if account.paused %}Sending stopped{% else %}Sending on{% endif %}</span>
+        </div>
+        {% if account.paused %}
+        <form method="post" action="/account/resume"><button class="btn ok sm">{{ icon('play', 13) }}Resume sending</button></form>
+        {% else %}
+        <form method="post" action="/account/pause"><button class="btn danger-outline sm" title="Stops all sending immediately. Approved messages stay queued.">{{ icon('stop', 13) }}Stop sending</button></form>
+        {% endif %}
+      </div>
+
+      <div class="side-user">
+        {{ avatar(account.handle, account.name, 'sm') }}
+        <span class="side-handle" title="Connected X account">@{{ account.handle }}</span>
+        <form method="post" action="/auth/logout"><button class="btn ghost icon-only" title="Sign out" aria-label="Sign out">{{ icon('logout') }}</button></form>
+      </div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <main id="main">
+      {% if account.paused %}
+      <div class="notice error" role="status">{{ icon('stop') }}<span>Sending is stopped for this account. Approved messages stay in the queue until you resume.</span></div>
+      {% endif %}
+      {% if account.needs_reauth %}
+      <div class="notice error" role="alert">{{ icon('alert') }}<span>X sign-in for @{{ account.handle }} has expired. <a href="/auth/login">Reconnect</a> to resume sending and reply tracking.</span></div>
+      {% endif %}
+      {% for kind, msg in flashes %}
+      <div class="notice {{ kind }}" role="{% if kind == 'error' %}alert{% else %}status{% endif %}">{{ icon('alert' if kind == 'error' else 'info') }}<span>{{ msg }}</span></div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+<main id="main" class="solo">
+  {% for kind, msg in flashes %}
+  <div class="notice {{ kind }}" role="{% if kind == 'error' %}alert{% else %}status{% endif %}">{{ icon('alert' if kind == 'error' else 'info') }}<span>{{ msg }}</span></div>
+  {% endfor %}
+  {% block solo %}{{ self.content() }}{% endblock %}
+</main>
+{% endif %}
+</body>
+</html>
