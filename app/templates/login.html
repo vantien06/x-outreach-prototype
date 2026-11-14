@@ -21,10 +21,18 @@
     <a class="btn primary big" href="/auth/login">Enter dry run</a>
     <p class="muted">Dry run uses fictional sample people. To go live, set <code>DRY_RUN=false</code> and add your keys.</p>
     {% else %}
-    <a class="btn primary big" href="/auth/login">Sign in with X</a>
+    <form method="post" action="/auth/login" class="signin">
+      {% if s.app_mode == "hosted" and s.invite_code %}
+      <div class="field invite-field">
+        <label for="f-invite">Invite code <span class="opt">(only needed the first time)</span></label>
+        <input id="f-invite" name="invite" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter the code you were given">
+      </div>
+      {% endif %}
+      <button class="btn primary big">Sign in with X</button>
+    </form>
     <p class="muted">You will be asked to let this app read posts and profiles, and read and send Direct Messages
       on your behalf. Your X password is never shared with this app.
-      {% if s.app_mode == "hosted" %}This deployment only accepts allowlisted handles.{% endif %}</p>
+      {% if s.app_mode == "hosted" %}{% if s.invite_code %}This tool is invite-only: enter your code the first time you sign in.{% else %}This deployment only accepts allowlisted handles.{% endif %}{% endif %}</p>
     {% endif %}
   </div>
   <p class="credit hero-credit">A take-home assignment by <b>Van Tien Nguyen</b> for the GenAI Fund Forward Deployed Engineer role. A working prototype, not a product.</p>

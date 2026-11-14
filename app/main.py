@@ -69,7 +69,13 @@ app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 # ------------------------------------------------------------------ helpers
 
 def current(request: Request):
-    return accounts.get(request.session.get("account_id"))
+    account = accounts.get(request.session.get("account_id"))
+    # The gate is re-checked on every request, so removing a handle from the allowlist or
+    # changing the invite code takes effect for people who are already signed in.
+    if account is not None and not accounts.is_allowed(account["handle"], account["x_user_id"]):
+        request.session.pop("account_id", None)
+        return None
+    return account
 
 
 def flash(request: Request, message: str, kind: str = "info") -> None:
@@ -236,9 +242,17 @@ def side_partial(request: Request):
     return templates.TemplateResponse(request, "_side_live.html", {"nav": nav_data(account)})
 
 
+@app.post("/auth/login")
+def auth_login_post(request: Request, invite: str = Form("")):
+    """Sign-in from the form on the landing page; carries the optional invite code."""
+    return auth_login(request, invite=invite)
+
+
 @app.get("/auth/login")
-def auth_login(request: Request):
+def auth_login(request: Request, invite: str = ""):
     s = get_settings()
+    if request.method == "GET":
+        invite = ""     # an invite code is only accepted from the form, never from a link
     if s.dry_run:
         from .x.mock import ME
 
@@ -252,7 +266,8 @@ def auth_login(request: Request):
     state, verifier, challenge = real.new_pkce()
     with db() as conn:
         conn.execute("DELETE FROM oauth_states WHERE created_at<?", (seconds_ago(900),))
-        conn.execute("INSERT INTO oauth_states (state, code_verifier, created_at) VALUES (?,?,?)", (state, verifier, iso()))
+        conn.execute("INSERT INTO oauth_states (state, code_verifier, invite, created_at) VALUES (?,?,?,?)",
+                     (state, verifier, invite.strip()[:200], iso()))
     return RedirectResponse(real.authorize_url(s.x_client_id, s.redirect_uri, state, challenge), status_code=303)
 
 
@@ -275,7 +290,7 @@ def auth_callback(request: Request, code: str = "", state: str = "", error: str 
     try:
         token = real.exchange_code(s.x_client_id, s.x_client_secret, code, row["code_verifier"], s.redirect_uri)
         me = real.RealX(lambda: token["access_token"]).me()
-        accounts.check_allowed(me.handle)
+        accounts.check_allowed(me.handle, me.id, row["invite"])
     except accounts.NotAllowed as e:
         real.revoke(s.x_client_id, s.x_client_secret, token["access_token"])
         flash(request, str(e), "error")

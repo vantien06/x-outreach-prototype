@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS oauth_states (
     code_verifier TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS invited_accounts (
+    x_user_id TEXT PRIMARY KEY,
+    handle TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    invited_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS campaigns (
     id INTEGER PRIMARY KEY,
     account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -147,6 +153,7 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("mock_dm_events", "kind", "TEXT NOT NULL DEFAULT 'message'"),
     ("candidates", "avatar_url", "TEXT NOT NULL DEFAULT ''"),
     ("campaigns", "depth", "TEXT NOT NULL DEFAULT 'quick'"),
+    ("oauth_states", "invite", "TEXT NOT NULL DEFAULT ''"),
 ]
 
 

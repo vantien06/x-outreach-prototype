@@ -1,6 +1,9 @@
 """Sign-in gate, account records, and disconnect-and-delete."""
 from __future__ import annotations
 
+import hashlib
+import hmac
+
 from ..config import get_settings
 from ..crypto import decrypt
 from ..db import db, iso
@@ -11,15 +14,54 @@ class NotAllowed(Exception):
     pass
 
 
-def check_allowed(handle: str) -> None:
+def _code_hash(code: str) -> str:
+    return hashlib.sha256(("invite:" + code.strip()).encode()).hexdigest()
+
+
+def is_allowed(handle: str, x_user_id: str = "") -> bool:
+    """True if this account may use the deployment right now, without presenting an invite code:
+    local or dry-run mode, a handle on the allowlist, or an account admitted earlier with the
+    invite code that is still configured."""
     s = get_settings()
     if s.app_mode != "hosted" or s.dry_run:
+        return True
+    if handle.lower() in s.allowed_handle_set:
+        return True
+    if s.invite_code.strip() and x_user_id:
+        with db() as conn:
+            row = conn.execute("SELECT code_hash FROM invited_accounts WHERE x_user_id=?", (x_user_id,)).fetchone()
+        return bool(row) and hmac.compare_digest(row["code_hash"], _code_hash(s.invite_code))
+    return False
+
+
+def check_allowed(handle: str, x_user_id: str = "", invite: str = "") -> None:
+    """Sign-in gate. Raises NotAllowed unless the account is allowed or presents the current invite code,
+    in which case it is remembered and does not need the code again."""
+    if is_allowed(handle, x_user_id):
         return
-    if handle.lower() not in s.allowed_handle_set:
+    s = get_settings()
+    code = s.invite_code.strip()
+    if code and invite.strip() and hmac.compare_digest(_code_hash(invite), _code_hash(code)):
+        if x_user_id:
+            with db() as conn:
+                conn.execute(
+                    "INSERT INTO invited_accounts (x_user_id, handle, code_hash, invited_at) VALUES (?,?,?,?)"
+                    " ON CONFLICT(x_user_id) DO UPDATE SET handle=excluded.handle, code_hash=excluded.code_hash,"
+                    " invited_at=excluded.invited_at",
+                    (x_user_id, handle, _code_hash(code), iso()),
+                )
+        return
+    if invite.strip():
+        raise NotAllowed("That invite code is not valid. Check it and sign in again.")
+    if code:
         raise NotAllowed(
-            f"@{handle} is not on this deployment's allowlist. Ask the host to add the handle to ALLOWED_HANDLES, "
-            "or run the app locally with your own keys."
+            f"This tool is invite-only and @{handle} has not been invited yet. "
+            "Enter your invite code on this page, then sign in again."
         )
+    raise NotAllowed(
+        f"@{handle} is not on this deployment's allowlist. Ask the host to add the handle, "
+        "or run the app locally with your own keys."
+    )
 
 
 def upsert(user: XUser) -> int:

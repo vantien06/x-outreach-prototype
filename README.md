@@ -111,6 +111,7 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 | `TOKEN_ENCRYPTION_KEY` | generated in local mode | Fernet key that encrypts stored X tokens. Required in hosted mode |
 | `DATABASE_PATH` | `data/outreach.db` | SQLite file. Point it at the volume when hosted |
 | `ALLOWED_HANDLES` | empty | Hosted only: X handles allowed to sign in. Empty admits nobody |
+| `INVITE_CODE` | empty | Hosted only: anyone who enters this code on the sign-in page can sign in with any X account and is remembered. Empty = allowlist only. Changing it signs out and revokes people invited with the old code |
 | `DAILY_SEND_CAP` | `20` | DMs per connected account per UTC day |
 | `SEND_SPACING_SECONDS` | `90` | Pause between two sends from the same account |
 | `DAILY_CANDIDATE_CAP` | `80` | People scored per account per UTC day (`0` = no cap) |

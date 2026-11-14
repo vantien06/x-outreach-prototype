@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     fast_model: str = "claude-haiku-5-5"
 
     allowed_handles: str = ""
+    # Hosted only: anyone who enters this code on the sign-in page may sign in with any X account.
+    # Empty = no invite code; only ALLOWED_HANDLES can sign in. Changing it revokes earlier invitees.
+    invite_code: str = ""
     daily_send_cap: int = 20
     send_spacing_seconds: float = 90
     daily_candidate_cap: int = 80

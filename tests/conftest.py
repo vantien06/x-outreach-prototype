@@ -20,6 +20,9 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("TOKEN_ENCRYPTION_KEY", "")
     get_settings.cache_clear()
     init_db()
+    # Build the app once under these default settings; its session cookie options are fixed at import,
+    # so a test that switches to hosted mode must not be the first to import it.
+    import app.main  # noqa: F401
     yield
     get_settings.cache_clear()
 
