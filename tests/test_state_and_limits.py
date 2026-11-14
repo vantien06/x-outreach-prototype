@@ -180,7 +180,8 @@ def test_discovery_keeps_evidence_and_filters_poor_fits():
         rows = conn.execute("SELECT * FROM candidates").fetchall()
         by_handle = {r["handle"]: r for r in rows}
         assert by_handle["demo_linh_robotics"]["fit_score"] >= 60
-        assert by_handle["demo_tom_cryptoalpha"]["fit_score"] < 60
+        assert by_handle["demo_grace_foodie"]["fit_score"] < 60
+        assert "demo_tom_cryptoalpha" not in by_handle   # promo account: left out before scoring
         for r in rows:
             assert conn.execute("SELECT COUNT(*) FROM evidence WHERE candidate_id=?", (r["id"],)).fetchone()[0] >= 1
             assert r["fit_reason"]

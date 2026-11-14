@@ -18,13 +18,18 @@ account; "docs only" = written from docs.x.com and never run for real.
                                                              10,000 per 24 h. The only place a reply typed in the
                                                              X app shows up; its text is end-to-end encrypted.
 
+    GET  /2/tweets/search/recent                             ran in the hosted test (first page only,
+                                                             last 7 days, max_results 10..100).
+    GET  /2/users/:id/following                              ran in the hosted test (needs follows.read).
+    GET  /2/users/:id/tweets                                 ran in the hosted test, including for a protected
+                                                             account the sender follows.
+
   Docs only, never run for real:
     token refresh and POST /2/oauth2/revoke
-    GET  /2/tweets/search/recent                             (last 7 days, max_results 10..100)
-    GET  /2/users/:id/following                              (needs follows.read)
-    GET  /2/users/:id/tweets
-    How X answers a refused DM (403) and a rate limit (429): the handling below
-    follows the documented status codes, no real 403/429 has been seen yet.
+    `next_token` paging of recent search (search_page) and the `location` user field,
+    both added after the hosted test.
+    How X answers a refused DM (403), a rate limit (429) and a read of a protected
+    account's posts: the handling follows the documented status codes, none has been seen yet.
     A 404 from the chat events endpoint is treated as "no conversation yet"; not observed.
 
   Not verified: pagination of chat events (only the first page is read) and the
@@ -46,7 +51,7 @@ from .base import ChatEvent, DMEvent, SendResult, XAmbiguous, XAuthError, XError
 AUTHORIZE_URL = "https://x.com/i/oauth2/authorize"
 API = "https://api.x.com/2"
 SCOPES = ["tweet.read", "users.read", "follows.read", "dm.read", "dm.write", "offline.access"]
-USER_FIELDS = "description,public_metrics,receives_your_dm"
+USER_FIELDS = "description,location,public_metrics,receives_your_dm"
 TIMEOUT = httpx.Timeout(20.0, connect=10.0)
 
 
@@ -101,7 +106,7 @@ def _user(d: dict) -> XUser:
     return XUser(
         id=d["id"], handle=d.get("username", ""), name=d.get("name", ""), bio=d.get("description", "") or "",
         followers=(d.get("public_metrics") or {}).get("followers_count", 0),
-        can_dm=d.get("receives_your_dm"),
+        can_dm=d.get("receives_your_dm"), location=d.get("location", "") or "",
     )
 
 
@@ -151,10 +156,17 @@ class RealX:
         return _user(self._request("GET", "/users/me", params={"user.fields": "description,public_metrics"})["data"])
 
     def search_recent(self, query: str, max_results: int):
-        data = self._request("GET", "/tweets/search/recent", params={
+        posts, users, _ = self.search_page(query, max_results)
+        return posts, users
+
+    def search_page(self, query: str, max_results: int, next_token: str | None = None):
+        params = {
             "query": query, "max_results": max(10, min(100, max_results)),
             "tweet.fields": "created_at,author_id", "expansions": "author_id", "user.fields": USER_FIELDS,
-        })
+        }
+        if next_token:
+            params["next_token"] = next_token
+        data = self._request("GET", "/tweets/search/recent", params=params)
         users = {u["id"]: _user(u) for u in (data.get("includes") or {}).get("users", [])}
         posts = [
             XPost(id=t["id"], author_id=t["author_id"], text=t.get("text", ""), created_at=t.get("created_at", ""),
@@ -162,7 +174,7 @@ class RealX:
             for t in data.get("data", [])
         ]
         self._on_usage("x_post_read", len(posts))
-        return posts, users
+        return posts, users, (data.get("meta") or {}).get("next_token")
 
     def lookup_usernames(self, handles: list[str]) -> list[XUser]:
         if not handles:

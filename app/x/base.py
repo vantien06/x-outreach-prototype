@@ -42,6 +42,8 @@ class XUser:
     followers: int = 0
     # None = X did not tell us. False = X says this account cannot DM them.
     can_dm: bool | None = None
+    # Free-text profile location, as the person typed it. Often empty.
+    location: str = ""
 
     @property
     def url(self) -> str:
@@ -106,6 +108,11 @@ class XClient(Protocol):
     def me(self) -> XUser: ...
 
     def search_recent(self, query: str, max_results: int) -> tuple[list[XPost], dict[str, XUser]]: ...
+
+    def search_page(self, query: str, max_results: int, next_token: str | None = None
+                    ) -> tuple[list[XPost], dict[str, XUser], str | None]:
+        """One page of recent search. The third value is the token for the next page, or None."""
+        ...
 
     def lookup_usernames(self, handles: list[str]) -> list[XUser]: ...
 

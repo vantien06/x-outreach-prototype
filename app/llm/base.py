@@ -29,7 +29,7 @@ class Person:
 
 
 class Queries(BaseModel):
-    queries: list[str] = Field(description="1 to 3 X recent-search queries")
+    queries: list[str] = Field(description="3 to 5 X recent-search queries, from narrow to broad")
 
 
 class Fit(BaseModel):

@@ -18,7 +18,8 @@
 {% elif camp.status == 'failed' %}
 <div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Discovery stopped:</strong> {{ camp.note }}</span></div>
 {% elif camp.note %}
-<div class="notice info">{{ icon('info') }}<span>{{ camp.note }}</span></div>
+<div class="notice info">{{ icon('info') }}<span class="note-lines">{% for line in camp.note.split('
+') %}<span>{{ line }}</span>{% endfor %}</span></div>
 {% endif %}
 
 {% if cands %}
@@ -27,7 +28,7 @@
   <div class="toolbar">
     <div>
       <h2>{{ cands|length }} {{ 'person' if cands|length == 1 else 'people' }} found</h2>
-      <p class="sub">People scoring {{ s.fit_threshold }} or more are preselected. Every reason links to the bio or post it is based on.</p>
+      <p class="sub">People scoring {{ s.fit_threshold }} or more who can receive your DM are preselected. Every reason links to the bio or post it is based on.</p>
     </div>
     {% if camp.status != 'discovering' %}
     <div class="toolbar-actions">
@@ -59,7 +60,7 @@
           </div>
         </div>
         <div class="cand-state">
-          {% if c.outreach_state %}{{ badge(c.outreach_state) }}{% endif %}
+          {% if c.outreach_state %}{{ badge(c.outreach_state) }}{% elif c.status == 'drafting' %}{{ badge('sending', 'Drafting') }}{% endif %}
           {% if c.can_dm == 0 %}{{ badge('bad', 'DMs closed to you', 'X reports this account cannot DM them') }}{% endif %}
           {{ score(c.fit_score, s.fit_threshold) }}
         </div>
@@ -78,6 +79,8 @@
         </li>
         {% endfor %}
       </ul>
+      {% elif camp.status != 'discovering' %}
+      <p class="muted">No bio or posts are on file for this person.</p>
       {% endif %}
     </div>
   </article>

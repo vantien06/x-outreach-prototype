@@ -1,0 +1,40 @@
+{# A small conversation view: our message, then whatever the recipient did, in order. Used by the
+   Sent list and by "Needs your attention" so a reply looks the same in both places. #}
+{% from "_ui.html" import icon, badge %}
+
+{% macro when(ts) -%}
+{% if ts %}<time datetime="{{ ts }}" data-ts="{{ ts }}">{{ ts|short }} UTC</time>{% endif %}
+{%- endmacro %}
+
+{% macro thread(text, sent_at, events, chat_href, note=None, awaiting=True) -%}
+<div class="thread">
+  <div class="turn out">
+    <div class="bubble"><p class="pre">{{ text }}</p></div>
+    <span class="turn-meta">You{% if sent_at %} · {{ when(sent_at) }}{% endif %}</span>
+  </div>
+  {% for e in events %}
+  {% if e.label == 'activity' %}
+  <p class="thread-note">{{ icon('check', 13) }}<span>Opened the conversation, most likely by accepting your message request · {{ when(e.event_at) }}</span></p>
+  {% elif e.label == 'unknown' %}
+  <p class="thread-note">{{ icon('info', 13) }}<span>Activity in thread that this tool could not identify · {{ when(e.event_at) }}</span></p>
+  {% elif e.label == 'encrypted' %}
+  <div class="turn in">
+    <div class="bubble locked">
+      <span class="lock-head">{{ icon('lock', 15) }}<b>Encrypted reply</b></span>
+      <p>They answered from the X app, which encrypts messages end to end. This tool can see that they replied and when, but the text can only be read on X.</p>
+      <a class="btn sm primary" href="{{ chat_href }}" target="_blank" rel="noopener">Read on X{{ icon('external', 12) }}</a>
+    </div>
+    <span class="turn-meta">Them · {{ when(e.event_at) }}</span>
+  </div>
+  {% else %}
+  <div class="turn in">
+    <div class="bubble"><p class="pre">{{ e.text }}</p></div>
+    <span class="turn-meta">Them · {{ when(e.event_at) }}{% if e.label %} · {{ badge(e.label) }}{% endif %}</span>
+    {% if e.summary %}<span class="turn-summary">{{ e.summary }}</span>{% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+  {% if note %}<p class="thread-note">{{ icon('info', 13) }}<span>{{ note }}</span></p>
+  {% elif awaiting and not events %}<p class="thread-note muted-note">{{ icon('clock', 13) }}<span>No reply yet. If they do not follow you, the message is waiting in their Message requests.</span></p>{% endif %}
+</div>
+{%- endmacro %}

@@ -32,8 +32,16 @@ class Settings(BaseSettings):
     global_budget_usd: float = 0.0
 
     max_candidates_per_campaign: int = 30
-    posts_per_query: int = 50
+    # Segment search: up to max_queries queries, posts_per_query posts on the first
+    # page of each, and never more than max_posts_per_campaign posts in total
+    # (every returned post is billed).
+    max_queries: int = 5
+    posts_per_query: int = 40
+    max_posts_per_campaign: int = 200
     seed_following_limit: int = 100
+    # Seed campaigns read this many recent posts per person before scoring (the
+    # X endpoint returns at least 5).
+    seed_posts_per_candidate: int = 5
     fit_threshold: int = 60
 
     worker_enabled: bool = True

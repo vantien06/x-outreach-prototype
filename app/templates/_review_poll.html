@@ -1,0 +1,28 @@
+{% from "_ui.html" import icon, empty %}
+{# Status block of the review queue. While drafts are being written it polls itself; new cards are
+   appended to #cards out of band, so a draft the operator is editing is never re-rendered. #}
+<div id="review-poll"{% if drafting %} hx-get="/partials/review" hx-trigger="every 3s" hx-swap="outerHTML"
+  hx-vals='js:{have: Array.from(document.querySelectorAll("[data-outreach-id]")).map(function (el) { return el.getAttribute("data-outreach-id"); }).join(",")}'{% endif %}>
+  {% if drafting %}
+  <div class="notice info" role="status"><span class="spinner" aria-hidden="true"></span><span>Writing {{ drafting }} {{ 'draft' if drafting == 1 else 'drafts' }}. Each one appears below as soon as it is ready.</span></div>
+  {% elif not total %}
+  <section class="panel">
+    {% if undrafted %}
+    {{ empty("No drafts waiting", undrafted ~ (" good-fit person" if undrafted == 1 else " good-fit people") ~ " you can message " ~ ("has" if undrafted == 1 else "have") ~ " no draft yet. Open a campaign to draft for them.", 'review') }}
+    <p class="empty-action"><a class="btn" href="/campaigns">Go to campaigns</a></p>
+    {% else %}
+    {{ empty("No drafts waiting", "Drafts appear here after you pick people in a campaign.", 'review') }}
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+{% if oob %}
+<span class="count" id="review-count" hx-swap-oob="true" {% if not total %}hidden{% endif %}>{{ total }}</span>
+{% if new_cards %}
+<div id="cards" hx-swap-oob="beforeend">
+{% for c in new_cards %}
+{% include "_review_card.html" %}
+{% endfor %}
+</div>
+{% endif %}
+{% endif %}

@@ -89,7 +89,8 @@ PERSONAS: list[dict] = [
         "posts": [
             "Got a gaussian-splat map running in real time on a mobile robot for indoor navigation.",
         ],
-        "reply": None,
+        # Accepts the message request but does not answer: shows up as activity, not as a reply.
+        "reply": None, "accept_only": True,
     },
     {
         "id": "9009", "handle": "demo_farah_health", "name": "Farah Aziz (demo)", "followers": 2100,
@@ -152,6 +153,10 @@ class MockX:
             posts.extend(_posts(p))
         return posts[:max_results], users
 
+    def search_page(self, query: str, max_results: int, next_token: str | None = None):
+        posts, users = self.search_recent(query, max_results)
+        return posts, users, None
+
     def lookup_usernames(self, handles: list[str]) -> list[XUser]:
         out = []
         for h in handles:
@@ -179,17 +184,20 @@ class MockX:
                 (self.owner, participant_id, self.owner, text, iso()),
             )
             event_id = f"mock-{cur.lastrowid}"
+            incoming = []
             if p.get("reply"):
-                at = iso(now() + timedelta(seconds=REPLY_DELAY_SECONDS))
                 # An encrypted reply arrives as three events and its text is not readable.
                 incoming = ([("system", ""), ("activity", ""), ("encrypted", "")] if p.get("encrypted")
                             else [("message", p["reply"])])
-                for kind, body in incoming:
-                    conn.execute(
-                        "INSERT INTO mock_dm_events (owner_x_user_id, participant_id, sender_id, text, visible_at, kind)"
-                        " VALUES (?,?,?,?,?,?)",
-                        (self.owner, participant_id, participant_id, body, at, kind),
-                    )
+            elif p.get("accept_only"):
+                incoming = [("system", ""), ("activity", "")]
+            at = iso(now() + timedelta(seconds=REPLY_DELAY_SECONDS))
+            for kind, body in incoming:
+                conn.execute(
+                    "INSERT INTO mock_dm_events (owner_x_user_id, participant_id, sender_id, text, visible_at, kind)"
+                    " VALUES (?,?,?,?,?,?)",
+                    (self.owner, participant_id, participant_id, body, at, kind),
+                )
         return SendResult(event_id=event_id, conversation_id=f"{participant_id}-{self.owner}")
 
     def _events(self, where: str, args: tuple) -> list[DMEvent]:

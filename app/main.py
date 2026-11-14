@@ -40,6 +40,9 @@ templates.env.globals["chat_url"] = chat_url
 async def lifespan(app: FastAPI):
     s = get_settings()
     init_db()
+    with db() as conn:
+        # Drafting runs in this process; a restart mid-draft must not leave people stuck as "drafting".
+        conn.execute("UPDATE candidates SET status='new' WHERE status='drafting'")
     for problem in s.config_problems():
         log.warning("configuration: %s", problem)
     worker = Worker() if s.worker_enabled else None
@@ -134,6 +137,7 @@ def dashboard_data(account) -> dict:
             "SELECT state, COUNT(*) n FROM outreach WHERE account_id=? GROUP BY state", (aid,))}
         replies_open = conn.execute(
             "SELECT e.*, o.recipient_handle, o.recipient_x_user_id, o.dm_conversation_id, o.text AS our_text,"
+            " o.sent_at AS our_sent_at,"
             " c.name AS recipient_name FROM dm_events e JOIN outreach o ON o.id=e.outreach_id"
             " LEFT JOIN candidates c ON c.id=o.candidate_id"
             " WHERE e.account_id=? AND e.direction='in' AND e.handled=0 ORDER BY e.id DESC", (aid,)).fetchall()
@@ -149,7 +153,15 @@ def dashboard_data(account) -> dict:
             " WHERE o.account_id=? AND o.state='sent' ORDER BY o.sent_at DESC LIMIT 100", (aid,)).fetchall()
         by_state = lambda st: conn.execute(
             f"{OUTREACH_WITH_NAME} WHERE o.account_id=? AND o.state=? ORDER BY o.updated_at DESC", (aid, st)).fetchall()
+        events: dict[int, list] = {}
+        for e in conn.execute(
+                "SELECT e.* FROM dm_events e WHERE e.account_id=? AND e.direction='in' AND e.outreach_id IS NOT NULL"
+                # Same-second ties: "opened the conversation" reads before the reply it preceded.
+                " ORDER BY COALESCE(e.event_at, e.created_at), COALESCE(e.label,'') NOT IN ('activity','unknown'), e.id",
+                (aid,)):
+            events.setdefault(e["outreach_id"], []).append(e)
         data = {
+            "events": events,
             "counts": counts, "replied": replied, "replies_open": replies_open, "sent": sent,
             "needs_check": by_state("needs_check"), "blocked": by_state("blocked"),
             "queue": by_state("approved") + by_state("sending"),
@@ -339,15 +351,23 @@ def _draft_many(account, candidate_ids: list[int]) -> None:
     for cid in candidate_ids:
         try:
             outreach.create_draft(account, cid, llm, x)
+            with db() as conn:
+                conn.execute("UPDATE candidates SET status='drafted' WHERE id=? AND status='drafting'", (cid,))
         except (LLMError, quota.LimitReached) as e:
             log.warning("draft failed for candidate %s: %s", cid, e)
             with db() as conn:
-                conn.execute("UPDATE candidates SET status='draft_failed', fit_reason=fit_reason || ? WHERE id=?",
-                             (f" [Draft failed: {e}]", cid))
+                conn.execute("UPDATE candidates SET status='draft_failed', fit_reason=COALESCE(fit_reason,'') || ?"
+                             " WHERE id=?", (f" [Draft failed: {e}]", cid))
             if isinstance(e, quota.LimitReached):
+                with db() as conn:   # release everyone still waiting in this batch
+                    conn.executemany("UPDATE candidates SET status='new' WHERE id=? AND status='drafting'",
+                                     [(i,) for i in candidate_ids])
                 return
-        except Exception:
+        except Exception as e:
             log.exception("draft failed for candidate %s", cid)
+            with db() as conn:
+                conn.execute("UPDATE candidates SET status='draft_failed', fit_reason=COALESCE(fit_reason,'') || ?"
+                             " WHERE id=?", (f" [Draft failed: {type(e).__name__}]", cid))
 
 
 @app.post("/campaigns/{campaign_id}/draft")
@@ -363,8 +383,10 @@ def draft_selected(request: Request, background: BackgroundTasks, campaign_id: i
     if not ids:
         flash(request, "Select at least one person to draft a message for.", "error")
         return back(request)
+    with db() as conn:
+        # Marked before the background job starts, so the review page knows drafts are on their way.
+        conn.executemany("UPDATE candidates SET status='drafting' WHERE id=?", [(i,) for i in ids])
     background.add_task(_draft_many, account, ids)
-    flash(request, f"Drafting {len(ids)} message(s). They appear here as they are ready; refresh if needed.")
     return RedirectResponse("/review", status_code=303)
 
 
@@ -377,11 +399,36 @@ def review_page(request: Request):
         return login_redirect()
     with db() as conn:
         cards = load_cards(conn, account["id"], "o.state='drafted'")
-        pending = conn.execute(
-            "SELECT COUNT(*) FROM candidates c WHERE c.account_id=? AND c.status='new' AND c.fit_score>=?"
-            " AND NOT EXISTS (SELECT 1 FROM outreach o WHERE o.candidate_id=c.id)",
-            (account["id"], get_settings().fit_threshold)).fetchone()[0]
-    return render(request, "review.html", account, cards=cards, undrafted=pending)
+        status = review_status(conn, account["id"])
+    return render(request, "review.html", account, cards=cards, total=len(cards), **status)
+
+
+def review_status(conn, account_id: int) -> dict:
+    """`drafting`: drafts being written right now. `undrafted`: good fits X lets us message that have no draft."""
+    drafting = conn.execute(
+        "SELECT COUNT(*) FROM candidates WHERE account_id=? AND status='drafting'", (account_id,)).fetchone()[0]
+    undrafted = conn.execute(
+        "SELECT COUNT(*) FROM candidates c WHERE c.account_id=? AND c.status='new' AND c.fit_score>=?"
+        " AND COALESCE(c.can_dm, 1)!=0"
+        " AND NOT EXISTS (SELECT 1 FROM outreach o WHERE o.account_id=c.account_id"
+        "                 AND o.recipient_x_user_id=c.x_user_id)",
+        (account_id, get_settings().fit_threshold)).fetchone()[0]
+    return {"drafting": drafting, "undrafted": undrafted}
+
+
+@app.get("/partials/review", response_class=HTMLResponse)
+def review_partial(request: Request, have: str = ""):
+    """Polled while drafts are being written: returns the status block plus any cards the page does not show yet."""
+    account = current(request)
+    if not account:
+        return HTMLResponse("", status_code=401)
+    shown = {int(v) for v in have.split(",") if v.strip().isdigit()}
+    with db() as conn:
+        cards = load_cards(conn, account["id"], "o.state='drafted'")
+        status = review_status(conn, account["id"])
+    return templates.TemplateResponse(request, "_review_poll.html", {
+        "new_cards": [c for c in cards if c["id"] not in shown], "total": len(cards), "oob": True,
+        "s": get_settings(), **status})
 
 
 @app.post("/outreach/{outreach_id}/{action}", response_class=HTMLResponse)

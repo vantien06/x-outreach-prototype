@@ -1,4 +1,5 @@
 {% from "_ui.html" import icon, badge, avatar, empty %}
+{% from "_thread.html" import thread, when %}
 {% set c = d.counts %}
 {% set u = d.usage %}
 
@@ -58,22 +59,14 @@
       {{ avatar(r.recipient_handle, r.recipient_name) }}
       <div class="row-title">
         <a class="who" href="https://x.com/{{ r.recipient_handle }}" target="_blank" rel="noopener">{% if r.recipient_name %}{{ r.recipient_name }} {% endif %}@{{ r.recipient_handle }}</a>
-        <span class="muted">{{ 'activity' if r.label == 'unknown' else 'replied' }} · {{ r.event_at|short }}</span>
+        <span class="muted">{{ 'activity' if r.label == 'unknown' else 'replied' }} · {{ when(r.event_at) }}</span>
       </div>
       {{ badge(r.label or 'reply') }}
     </div>
-    {% if r.label == 'encrypted' %}
-    <p class="callout info">{{ icon('info', 14) }}<span><strong>Replied (encrypted): open on X to read.</strong> Replies typed in the X app are end-to-end encrypted, so this tool can see that they answered and when, but not what they wrote.</span></p>
-    {% elif r.label == 'unknown' %}
-    <p class="callout info">{{ icon('info', 14) }}<span><strong>Activity from recipient: open on X.</strong> Something happened in this conversation that this tool could not identify as a message.</span></p>
-    {% else %}
-    <blockquote class="reply">{{ r.text }}</blockquote>
-    {% if r.summary %}<p class="muted">{{ r.summary }}</p>{% endif %}
-    {% endif %}
+    {{ thread(r.our_text, r.our_sent_at, d.events.get(r.outreach_id, []), chat_url(r, account)) }}
     {% if r.label == 'opt_out' %}<p class="callout bad">{{ icon('block', 14) }}Asked not to be contacted. This tool will never message them again.</p>{% endif %}
-    <details data-key="reply-{{ r.id }}"><summary>Your message</summary><p class="pre msg">{{ r.our_text }}</p></details>
     <div class="actions">
-      <a class="btn{% if r.label in ('encrypted', 'unknown') %} primary{% endif %}" href="{{ chat_url(r, account) }}" target="_blank" rel="noopener">{{ 'Open conversation on X' if r.label in ('encrypted', 'unknown') else 'Open conversation on X to reply' }}{{ icon('external', 13) }}</a>
+      <a class="btn" href="{{ chat_url(r, account) }}" target="_blank" rel="noopener">{{ 'Open conversation on X' if r.label in ('encrypted', 'unknown') else 'Reply on X' }}{{ icon('external', 13) }}</a>
       <form method="post" action="/replies/{{ r.id }}/handled"><button class="btn ghost">{{ icon('check', 14) }}Mark handled</button></form>
     </div>
   </article>
@@ -88,8 +81,7 @@
       </div>
       {{ badge('needs_check', 'Check on X') }}
     </div>
-    <p class="reason">{{ o.reason }}</p>
-    <details data-key="check-{{ o.id }}"><summary>Message</summary><p class="pre msg">{{ o.text }}</p></details>
+    {{ thread(o.text, o.sending_at, d.events.get(o.id, []), chat_url(o, account), note=o.reason, awaiting=False) }}
     <div class="actions">
       <a class="btn" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener">Open conversation on X{{ icon('external', 13) }}</a>
       <form method="post" action="/outreach/{{ o.id }}/delivered"><button class="btn">{{ icon('check', 14) }}It was delivered</button></form>
@@ -155,26 +147,36 @@
   <div class="panel-head">
     <div>
       <h2>Sent {% if d.sent %}<span class="count">{{ d.sent|length }}</span>{% endif %}</h2>
-      <p class="sub">A first message to someone who does not follow you lands in their <strong>Message requests</strong> on X until they accept it. Replies typed in the X app are encrypted: you see who replied here and read the text on X.</p>
+      <p class="sub">Open a row to see the conversation. A first message to someone who does not follow you lands in their <strong>Message requests</strong> on X until they accept it.</p>
     </div>
   </div>
   {% if not d.sent %}
   {{ empty("Nothing sent yet", "Messages you approve appear here once they are delivered.", 'send') }}
   {% else %}
-  <div class="table-wrap">
-  <table class="table">
-    <thead><tr><th>Person</th><th>Sent</th><th>Message</th><th>Reply</th></tr></thead>
-    <tbody>
-    {% for o in d.sent %}
-    <tr>
-      <td data-label="Person"><span class="cell-person">{{ avatar(o.recipient_handle, o.recipient_name, 'sm') }}<span><a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">@{{ o.recipient_handle }}</a>{% if o.recipient_name %} <span class="muted">{{ o.recipient_name }}</span>{% endif %}</span></span></td>
-      <td data-label="Sent" class="muted nowrap">{{ o.sent_at|short }}</td>
-      <td data-label="Message"><details data-key="sent-{{ o.id }}"><summary>{{ o.text[:70] }}…</summary><p class="pre msg">{{ o.text }}</p></details></td>
-      <td data-label="Reply">{% if o.reply_event %}{{ badge(o.reply_label or 'reply', title='The recipient was active in the conversation (for example accepted your message request) but has not sent a message.' if o.reply_label == 'activity' else None) }} <a class="muted" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener" title="Open this conversation on X">open{{ icon('external', 12) }}</a>{% else %}<span class="muted">No reply yet</span>{% endif %}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  {% set attn = d.replies_open|map(attribute='outreach_id')|list %}
+  <div class="sent-list">
+  {% for o in d.sent %}
+  {% set evs = d.events.get(o.id, []) %}
+  {# Rows with a reply start open so the answer is visible without a click, unless the same
+     conversation is already shown under "Needs your attention" above. #}
+  <details class="sent-item" data-key="sent-{{ o.id }}"{% if o.reply_event and o.reply_label not in ('activity', 'unknown') and o.id not in attn %} open{% endif %}>
+    <summary>
+      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      <span class="sent-who"><b>{{ o.recipient_name or ('@' ~ o.recipient_handle) }}</b>{% if o.recipient_name %} <span class="handle">@{{ o.recipient_handle }}</span>{% endif %}</span>
+      <span class="sent-excerpt">{{ o.text }}</span>
+      <span class="sent-time">{{ when(o.sent_at) }}</span>
+      {% if o.reply_event %}{{ badge(o.reply_label or 'reply') }}{% else %}{{ badge('skipped', 'No reply yet') }}{% endif %}
+      <span class="chev" aria-hidden="true">›</span>
+    </summary>
+    <div class="sent-body">
+      {{ thread(o.text, o.sent_at, evs, chat_url(o, account)) }}
+      <div class="actions">
+        <a class="btn sm" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener">Open conversation on X{{ icon('external', 12) }}</a>
+        <a class="btn ghost sm" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">View profile{{ icon('external', 12) }}</a>
+      </div>
+    </div>
+  </details>
+  {% endfor %}
   </div>
   {% endif %}
 </section>
