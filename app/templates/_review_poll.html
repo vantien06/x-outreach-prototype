@@ -1,7 +1,7 @@
 {% from "_ui.html" import icon, empty %}
 {# Status block of the review queue. While drafts are being written it polls itself; new cards are
    appended to #cards out of band, so a draft the operator is editing is never re-rendered. #}
-<div id="review-poll"{% if drafting %} hx-get="/partials/review" hx-trigger="every 3s" hx-swap="outerHTML"
+<div id="review-poll"{% if poll_oob %} hx-swap-oob="outerHTML"{% endif %}{% if drafting %} hx-get="/partials/review" hx-trigger="every 3s" hx-swap="outerHTML"
   hx-vals='js:{have: Array.from(document.querySelectorAll("[data-outreach-id]")).map(function (el) { return el.getAttribute("data-outreach-id"); }).join(",")}'{% endif %}>
   {% if drafting %}
   <div class="notice info" role="status"><span class="spinner" aria-hidden="true"></span><span>Writing {{ drafting }} {{ 'draft' if drafting == 1 else 'drafts' }}. Each one appears below as soon as it is ready.</span></div>

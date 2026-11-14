@@ -46,8 +46,10 @@
 
     <div class="field f-seeds">
       <label for="f-seeds">Seed accounts <span class="req" title="Required">*</span></label>
-      <input id="f-seeds" name="seeds" placeholder="@handle1, @handle2">
-      <p class="hint">Comma-separated handles or profile links.</p>
+      <input id="f-seeds" name="seeds" placeholder="@handle1, @handle2" autocomplete="off"
+             hx-get="/partials/seed-preview" hx-trigger="input changed delay:700ms" hx-target="#seed-preview" hx-swap="innerHTML" hx-indicator="#seed-spin">
+      <p class="hint">Comma-separated handles or profile links. Each account is shown below as you type, so you can check it is the right one. <span id="seed-spin" class="htmx-indicator">Looking up…</span></p>
+      <div id="seed-preview" class="seed-preview" aria-live="polite"></div>
     </div>
 
     <div class="field">
@@ -65,7 +67,7 @@
       <p class="hint">X bills every post a search returns, so a wider search costs more. Amounts are estimates.</p>
     </fieldset>
 
-    <div class="form-actions"><button class="btn primary">{{ icon('search') }}Find people</button><span class="hint"><span class="req">*</span> required</span></div>
+    <div class="form-actions"><button class="btn primary">{{ icon('search') }}Find people</button></div>
   </form>
 </section>
 {% endblock %}

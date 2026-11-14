@@ -1,0 +1,14 @@
+{% from "_ui.html" import icon, avatar %}
+{% if error %}<p class="seed-msg bad">{{ icon('alert', 13) }}{{ error }}</p>{% endif %}
+{% for r in rows %}
+  {% if r.user %}
+  <a class="seed-chip ok" href="https://x.com/{{ r.user.handle }}" target="_blank" rel="noopener" title="Open this profile on X">
+    {{ avatar(r.user.handle, r.user.name, '', r.user.avatar_url) }}
+    <span class="seed-id"><b>{{ r.user.name or r.user.handle }}</b><span class="handle">@{{ r.user.handle }} · {{ "{:,}".format(r.user.followers) }} followers</span></span>
+    <span class="seed-bio">{{ r.user.bio or 'No bio.' }}</span>
+    <span class="seed-ok" aria-label="Found">{{ icon('check', 14) }}</span>
+  </a>
+  {% elif r.checked %}
+  <p class="seed-chip miss">{{ icon('alert', 14) }}<span><b>@{{ r.handle }}</b> was not found on X. Check the spelling.</span></p>
+  {% endif %}
+{% endfor %}

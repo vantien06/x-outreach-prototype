@@ -4,32 +4,32 @@
 {% set u = d.usage %}
 
 <section class="stats" aria-label="Overview">
-  <a class="stat {% if d.attention %}hot{% endif %}" href="#attention">
+  <a class="stat t-red {% if d.attention %}hot{% endif %}" href="#attention">
     <span class="stat-label">{{ icon('alert', 14) }}Needs attention</span>
     <b class="stat-num">{{ d.attention }}</b>
     <span class="stat-foot">replies and unclear sends</span>
   </a>
-  <a class="stat" href="/review">
+  <a class="stat t-amber" href="/review">
     <span class="stat-label">{{ icon('review', 14) }}Drafts to review</span>
     <b class="stat-num">{{ c.get('drafted', 0) }}</b>
     <span class="stat-foot">waiting for your approval</span>
   </a>
-  <a class="stat" href="#queue">
+  <a class="stat t-blue" href="#queue">
     <span class="stat-label">{{ icon('clock', 14) }}Queued</span>
     <b class="stat-num">{{ c.get('approved', 0) + c.get('sending', 0) }}</b>
     <span class="stat-foot">approved, waiting to send</span>
   </a>
-  <a class="stat" href="#sent">
+  <a class="stat t-green" href="#sent">
     <span class="stat-label">{{ icon('send', 14) }}Sent</span>
     <b class="stat-num">{{ c.get('sent', 0) }}</b>
     <span class="stat-foot">delivered to X</span>
   </a>
-  <a class="stat" href="#sent">
+  <a class="stat t-violet" href="#sent">
     <span class="stat-label">{{ icon('inbox', 14) }}Replied</span>
     <b class="stat-num">{{ d.replied }}</b>
     <span class="stat-foot">{% if c.get('sent', 0) %}{{ (100 * d.replied / c.get('sent', 0))|round|int }}% of sent{% else %}no sends yet{% endif %}</span>
   </a>
-  <a class="stat" href="#blocked">
+  <a class="stat t-red {% if c.get('blocked', 0) %}hot{% endif %}" href="#blocked">
     <span class="stat-label">{{ icon('block', 14) }}Blocked</span>
     <b class="stat-num">{{ c.get('blocked', 0) }}</b>
     <span class="stat-foot">not sent, reason shown below</span>

@@ -116,6 +116,17 @@ def review_card(request: Request, account, outreach_id: int, message: str = "") 
     return templates.TemplateResponse(request, "_review_card.html", {"c": card[0], "message": message, "s": get_settings()})
 
 
+def card_removed(request: Request, account) -> HTMLResponse:
+    """Response for a card that left the review queue: the card itself is replaced by nothing, and the
+    count in the heading and the status block (empty state) are refreshed out of band."""
+    with db() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM outreach WHERE account_id=? AND state='drafted'", (account["id"],)).fetchone()[0]
+        status = review_status(conn, account["id"])
+    return templates.TemplateResponse(request, "_review_poll.html", {
+        "new_cards": [], "total": total, "oob": True, "poll_oob": True, "s": get_settings(), **status})
+
+
 def load_cards(conn, account_id: int, where: str, args: tuple = ()) -> list[dict]:
     rows = conn.execute(
         "SELECT o.*, c.name, c.avatar_url, c.bio, c.followers, c.can_dm, c.fit_score, c.fit_category, c.fit_reason, c.source,"
@@ -402,6 +413,39 @@ def draft_selected(request: Request, background: BackgroundTasks, campaign_id: i
 
 # ------------------------------------------------------------------ review
 
+# Seed handles already looked up, so typing does not bill the same profile twice. handle -> (time, XUser | None)
+_seed_cache: dict[str, tuple[float, object]] = {}
+SEED_CACHE_SECONDS = 900
+
+
+@app.get("/partials/seed-preview", response_class=HTMLResponse)
+def seed_preview(request: Request, seeds: str = ""):
+    """Shown under the seed field as the operator types: who each handle is, or that it was not found."""
+    import time
+
+    account = current(request)
+    if not account:
+        return HTMLResponse("", status_code=401)
+    handles = discovery.parse_handles(seeds)[:6]
+    now_ts, error = time.time(), ""
+    missing = [h for h in handles
+               if h.lower() not in _seed_cache or now_ts - _seed_cache[h.lower()][0] > SEED_CACHE_SECONDS]
+    if missing:
+        try:
+            with db() as conn:
+                quota.check_budget(conn)
+            found = {u.handle.lower(): u for u in clients.get_x(account).lookup_usernames(missing)}
+            for h in missing:
+                _seed_cache[h.lower()] = (now_ts, found.get(h.lower()))
+        except quota.LimitReached as e:
+            error = str(e)
+        except (XError, XAmbiguous) as e:
+            error = f"X could not look these up right now ({e})."
+    rows = [{"handle": h, "user": _seed_cache.get(h.lower(), (0, None))[1],
+             "checked": h.lower() in _seed_cache} for h in handles]
+    return templates.TemplateResponse(request, "_seed_preview.html", {"rows": rows, "error": error, "s": get_settings()})
+
+
 @app.get("/review", response_class=HTMLResponse)
 def review_page(request: Request):
     account = current(request)
@@ -455,12 +499,12 @@ def outreach_action(request: Request, outreach_id: int, action: str, text: str =
         if action == "approve":
             message = outreach.approve(aid, outreach_id) or ""
             if not message and htmx:
-                return HTMLResponse("")  # card leaves the review queue
+                return card_removed(request, account)  # card leaves the review queue
         else:
             message = "Saved."
     elif action == "skip":
         if outreach.human_move(aid, outreach_id, "drafted", "skipped", reason="Skipped by operator.") and htmx:
-            return HTMLResponse("")
+            return card_removed(request, account)
     elif action == "unapprove":
         if not outreach.human_move(aid, outreach_id, "approved", "drafted", approved_at=None):
             flash(request, "Too late to pull this back: it is already being sent or was sent.", "error")
