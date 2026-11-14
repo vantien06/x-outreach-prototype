@@ -116,7 +116,7 @@ def test_scoring_budget_goes_to_builders_first(monkeypatch):
     llm = TermsLLM([Q1])
     discovery.run_campaign(cid, SearchX({Q1: [people]}), llm)
     assert sorted(llm.scored) == ["u2", "u4", "u6"]
-    assert "3 more people were found but not scored" in camp_row(cid)["note"]
+    assert "3 more people matched the search but were not reviewed" in camp_row(cid)["note"]
 
 
 def test_off_target_accounts_are_left_out_and_named(monkeypatch):
@@ -132,6 +132,6 @@ def test_off_target_accounts_are_left_out_and_named(monkeypatch):
     discovery.run_campaign(cid, SearchX({Q1: [people]}), llm)
     note = camp_row(cid)["note"]
     assert llm.scored == ["u1"] and set(candidates()) == {"u1"}
-    assert "2 left out before scoring" in note
+    assert "2 accounts were skipped" in note
     assert "@ZOOMEX_Official (organisation, news or bot account)" in note
     assert "@u3 (reads as off-target:" in note

@@ -117,7 +117,6 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 | `GLOBAL_BUDGET_USD` | `0` | Estimated spend after which discovery, drafting and sending lock for everyone (`0` = no ceiling) |
 | `MAX_QUERIES`, `POSTS_PER_QUERY`, `MAX_POSTS_PER_CAMPAIGN` | `3`, `20`, `60` | Bounds on what one Quick segment search may read |
 | `MAX_CANDIDATES_PER_CAMPAIGN` | `15` | People scored per Quick campaign |
-| `WIDE_SEARCH_FACTOR` | `3` | A Wide search multiplies the four limits above by this |
 | `SEED_FOLLOWING_LIMIT`, `SEED_POSTS_PER_CANDIDATE` | `100`, `5` | Bounds on a seed campaign |
 | `CHAT_READS_PER_15MIN`, `CHAT_READS_PER_DAY`, `CHAT_READS_PER_TICK` | `60`, `6000`, `8` | Self-imposed limits on reply checks |
 
@@ -130,7 +129,7 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 
    Also say who you are and why you are writing. Drafts only say about you what you write here.
 
-   *Search size* (segment campaigns): **Quick** is the default: 3 searches, at most 60 posts, at most 15 people scored, about $0.31. **Wide** is about three times the people for about three times the cost. The form shows both estimates.
+   *Search size* (segment campaigns): **Quick** is the default: 3 searches, at most 60 posts, at most 15 people reviewed (about $0.31). **Standard** reads up to 120 posts and reviews up to 25 people (about $0.62); **Deep** reads up to 200 posts and reviews up to 40 people (about $1.02). The app itself shows no prices; X bills every post a search returns, so cost grows with the size.
 3. **Look at the people found.** Each has a fit score and a short reason. Open *Evidence* to see the bio and posts the reason rests on; each item is a link to that post or profile on X. Nobody is preselected: tick the people you want a draft for. The line at the top gives the estimated cost; *Search details* lists the searches that ran and who was left out and why.
 
    How people are chosen for scoring: accounts whose name or handle marks them as an organisation, news feed, bot or promotion are dropped first. Everyone else gets a free pre-score from their bio and the posts already read, using two word lists the model writes for the segment (signs that someone does this work, and signs that an account only talks about it) on top of built-in ones. A bio counts more than posts. People are ranked by that pre-score, with "X says you can message them" as a tie-break, and only the top of the list is scored by the model. Accounts that read as clearly off-target are left out and named in *Search details*.
@@ -184,7 +183,7 @@ X's pay-per-use prices below come from third-party summaries, not from an offici
 
 Measured in the hosted test: three small campaigns plus a repeat run that found nobody new (16 people scored in total), one draft, one DM and its reply checks came to about **$0.37** by the app's own estimate.
 
-Upper bounds per campaign with default settings: a Quick segment search reads at most 60 posts (about $0.30) and scores at most 15 people, about $0.31 in total, which is what a live Quick run measured; a Wide search is about three times that; a seed campaign reads at most 100 profiles (about $1.00) plus 5 posts for each of up to 15 people (about $0.38). Typical runs are well below these. Hosting on Railway is about $5 a month.
+Upper bounds per campaign with default settings: a Quick segment search reads at most 60 posts (about $0.30) and scores at most 15 people, about $0.31 in total, which is what a live Quick run measured; Standard and Deep searches read up to 120 and 200 posts (about $0.62 and $1.02); a seed campaign reads at most 100 profiles (about $1.00) plus 5 posts for each of up to 15 people (about $0.38). Typical runs are well below these. Hosting on Railway is about $5 a month.
 
 ## Limitations and what is not built
 

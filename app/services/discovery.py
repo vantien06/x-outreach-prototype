@@ -188,25 +188,30 @@ def run_campaign(campaign_id: int, x: XClient, llm: LLMClient) -> None:
     except quota.LimitReached as e:
         _set_status(campaign_id, "failed", str(e))
     except (XError, XAmbiguous) as e:
-        _set_status(campaign_id, "failed", f"X API problem during discovery: {e}")
+        _set_status(campaign_id, "failed", f"X returned a problem while searching: {e}")
     except LLMError as e:
-        _set_status(campaign_id, "failed", f"LLM problem during discovery: {e}")
+        _set_status(campaign_id, "failed", f"The AI model returned a problem while reviewing people: {e}")
     except Exception as e:
         _set_status(campaign_id, "failed", f"Unexpected error: {type(e).__name__}: {e}")
 
 
+SEARCH_SIZES = {
+    # depth: (queries, posts per query, posts in total, people reviewed)
+    "quick": (3, 20, 60, 15),
+    "standard": (4, 30, 120, 25),
+    "deep": (5, 40, 200, 40),
+}
+
+
 def limits(depth: str) -> dict:
-    """Search budget for one campaign. 'wide' trades about three times the cost for more people."""
+    """Search budget for one campaign. The 'quick' row follows the configured defaults."""
     s = get_settings()
-    k = max(1, s.wide_search_factor) if depth == "wide" else 1
-    return {"queries": min(8, s.max_queries * k), "per_query": min(100, s.posts_per_query * k),
-            "posts": s.max_posts_per_campaign * k, "candidates": s.max_candidates_per_campaign * k}
-
-
-def estimate_usd(depth: str) -> float:
-    """Upper-bound estimate shown before a search starts."""
-    s, lim = get_settings(), limits(depth)
-    return lim["posts"] * s.cost_x_post_read + (lim["candidates"] + 1) * s.cost_llm_fast
+    depth = {"wide": "deep"}.get(depth, depth)
+    if depth not in SEARCH_SIZES or depth == "quick":
+        return {"queries": s.max_queries, "per_query": s.posts_per_query,
+                "posts": s.max_posts_per_campaign, "candidates": s.max_candidates_per_campaign}
+    q, per, posts, people = SEARCH_SIZES[depth]
+    return {"queries": q, "per_query": per, "posts": posts, "candidates": people}
 
 
 def _search_segment(segment: str, x: XClient, llm: LLMClient, account_id: int, want: int,
@@ -277,7 +282,7 @@ def _search_segment(segment: str, x: XClient, llm: LLMClient, account_id: int, w
 
     notes.append("Queries used: " + " | ".join(q for q in queries if not any(f.startswith(q) for f in failed)))
     if failed:
-        notes.append("Queries X refused: " + " | ".join(failed))
+        notes.append("Searches X did not accept: " + " | ".join(failed))
     return found, terms
 
 
@@ -337,7 +342,7 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
     account_id = camp["account_id"]
     if left == 0:
         raise quota.LimitReached(
-            f"Daily limit of {s.daily_candidate_cap} scored candidates reached for this account. Try again tomorrow (UTC)."
+            f"You have reached today's limit of {s.daily_candidate_cap} people reviewed. Please try again tomorrow."
         )
     lim = limits(camp["depth"] if "depth" in camp.keys() else "quick")
     budget = lim["candidates"] if left is None else min(left, lim["candidates"])
@@ -367,14 +372,18 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
         (dropped if why else kept).append((f, why))
     kept = sorted((f for f, _ in kept), key=rank_key, reverse=True)
     if len(kept) > budget:
-        notes.append(f"{len(kept) - budget} more people were found but not scored (limit {budget} per run); "
-                     "people whose bio and posts show the most signs of doing this work were scored first.")
+        notes.append(f"{len(kept) - budget} more people matched the search but were not reviewed this time. "
+                     "The ones whose profile and posts looked most relevant were reviewed first; "
+                     "choose a larger search size to include more.")
     kept = kept[:budget]
     if dropped:
         shown = ", ".join(f"@{f.user.handle} ({why})" for f, why in dropped[:6])
-        notes.append(f"{len(dropped)} left out before scoring: {shown}" + (" and others." if len(dropped) > 6 else "."))
+        notes.append(f"{len(dropped)} {'account was' if len(dropped) == 1 else 'accounts were'} skipped because "
+                     f"{'it does' if len(dropped) == 1 else 'they do'} not look like the people you described: {shown}"
+                     + (" and others." if len(dropped) > 6 else "."))
     if skipped_known:
-        notes.append(f"{skipped_known} already in an earlier campaign or your own account, skipped.")
+        notes.append(f"{skipped_known} {'person was' if skipped_known == 1 else 'people were'} skipped because "
+                     f"{'they' if skipped_known != 1 else 'they'} already appear in one of your campaigns.")
 
     scored = 0
     post_state: dict = {}
@@ -435,21 +444,17 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
         scored += 1
 
     if not found:
-        notes.insert(0, "No people found. Try a broader segment description or different seed accounts.")
+        notes.insert(0, "Nobody was found this time. Try describing the segment more broadly, or use different seed accounts.")
     notes.append(_cost_note(cost, scored))
     _set_status(campaign_id, "ready", "\n".join(notes))
 
 
 def _cost_note(cost: dict, scored: int) -> str:
-    s = get_settings()
+    """One plain line about what the search did. Costs are documented in the README, not shown in the app."""
     parts = []
     if cost["posts"]:
         parts.append(f"{cost['posts']} posts read")
     if cost["users"]:
         parts.append(f"{cost['users']} profiles read")
-    parts.append(f"{scored} {'person' if scored == 1 else 'people'} scored")
-    if s.dry_run:
-        return "Dry run: nothing was billed (" + ", ".join(parts) + ")."
-    usd = (cost["posts"] * s.cost_x_post_read + cost["users"] * s.cost_x_user_read
-           + cost["llm_fast"] * s.cost_llm_fast)
-    return f"Estimated cost of this search: ${usd:.2f} (" + ", ".join(parts) + "; X prices are estimates)."
+    parts.append(f"{scored} {'person' if scored == 1 else 'people'} reviewed")
+    return "Search summary: " + ", ".join(parts).capitalize() + "."

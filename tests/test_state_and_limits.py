@@ -141,7 +141,7 @@ def test_daily_candidate_cap(monkeypatch):
     discovery.run_campaign(second, x, llm)
     with db() as conn:
         row = conn.execute("SELECT status, note FROM campaigns WHERE id=?", (second,)).fetchone()
-        assert row["status"] == "failed" and "Daily limit" in row["note"]
+        assert row["status"] == "failed" and "today's limit" in row["note"]
         assert conn.execute("SELECT COUNT(*) FROM candidates").fetchone()[0] == 3
 
 

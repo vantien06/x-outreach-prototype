@@ -41,30 +41,31 @@
     <div class="field f-segment">
       <label for="f-segment">Target segment <span class="req req-segment" title="Required">*</span><span class="opt opt-seeds">(optional with seed accounts)</span></label>
       <textarea id="f-segment" name="segment" rows="2" placeholder="e.g. Founders and engineers building robots or embodied AI in Southeast Asia"></textarea>
-      <p class="hint">Used to search recent posts and to score fit. With seed accounts, it is optional and only used for scoring.</p>
+      <p class="hint">Describe the people in your own words. With seed accounts this is optional and only used to judge fit.</p>
     </div>
 
     <div class="field f-seeds">
       <label for="f-seeds">Seed accounts <span class="req" title="Required">*</span></label>
       <input id="f-seeds" name="seeds" placeholder="@handle1, @handle2" autocomplete="off"
              hx-get="/partials/seed-preview" hx-trigger="input changed delay:700ms" hx-target="#seed-preview" hx-swap="innerHTML" hx-indicator="#seed-spin">
-      <p class="hint">Comma-separated handles or profile links. Each account is shown below as you type, so you can check it is the right one. <span id="seed-spin" class="htmx-indicator">Looking up…</span></p>
+      <p class="hint">Comma-separated handles or profile links. Each account appears below as you type, so you can check it is the right one. <span id="seed-spin" class="htmx-indicator">Looking up…</span></p>
       <div id="seed-preview" class="seed-preview" aria-live="polite"></div>
     </div>
 
     <div class="field">
       <label for="f-pitch">Who you are and why you are reaching out <span class="req" title="Required">*</span></label>
       <textarea id="f-pitch" name="pitch" rows="3" required placeholder="e.g. I'm with GenAI Fund. We back AI and robotics builders in Southeast Asia and run a founder community in Vietnam."></textarea>
-      <p class="hint">Drafts only say about you what you write here.</p>
+      <p class="hint">Every draft introduces you with these words and nothing else, so write it the way you would say it.</p>
     </div>
 
     <fieldset class="field f-depth">
       <legend>Search size <span class="opt">(optional)</span></legend>
-      <div class="segmented">
-        <label><input type="radio" name="depth" value="quick" checked><span><b>Quick</b><small>Up to {{ s.max_posts_per_campaign }} posts, about ${{ '%.2f'|format(est_quick) }}</small></span></label>
-        <label><input type="radio" name="depth" value="wide"><span><b>Wide</b><small>About {{ s.wide_search_factor }}× the people, about ${{ '%.2f'|format(est_wide) }}</small></span></label>
+      <div class="segmented three">
+        <label><input type="radio" name="depth" value="quick" checked><span><b>Quick</b><small>Looks at up to 60 recent posts</small></span></label>
+        <label><input type="radio" name="depth" value="standard"><span><b>Standard</b><small>Up to 120 recent posts</small></span></label>
+        <label><input type="radio" name="depth" value="deep"><span><b>Deep</b><small>Up to 200 recent posts</small></span></label>
       </div>
-      <p class="hint">X bills every post a search returns, so a wider search costs more. Amounts are estimates.</p>
+      <p class="hint">A larger search looks at more posts and reviews more people. It takes a little longer.</p>
     </fieldset>
 
     <div class="form-actions"><button class="btn primary">{{ icon('search') }}Find people</button></div>

@@ -14,21 +14,22 @@
 </div>
 
 {% if camp.status == 'discovering' %}
-<div class="notice info" role="status"><span class="spinner" aria-hidden="true"></span><span>Finding and scoring people. This page updates by itself.</span></div>
+<div class="notice info" role="status"><span class="spinner" aria-hidden="true"></span><span>Finding people and checking how well they fit. New people appear below as they are found.</span></div>
 {% elif camp.status == 'failed' %}
 <div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Discovery stopped:</strong> {{ camp.note }}</span></div>
 {% elif camp.note %}
 {% set ns = namespace(queries=[], cost='', other=[]) %}
 {% for line in camp.note.splitlines() %}
   {% if line.startswith('Queries used: ') %}{% set ns.queries = line[14:].split(' | ') %}
-  {% elif line.startswith('Estimated cost') or line.startswith('Dry run:') %}{% set ns.cost = line %}
+  {% elif line.startswith('Search summary: ') %}{% set ns.cost = line[16:] %}
+  {% elif (line.startswith('Estimated cost') or line.startswith('Dry run:')) and '(' in line %}{% set ns.cost = (line.split('(', 1)[1].split(';')[0].rstrip(').')|capitalize) ~ '.' %}
   {% elif line.strip() %}{% set ns.other = ns.other + [line] %}{% endif %}
 {% endfor %}
 <details class="search-notes">
-  <summary>{{ icon('info') }}<span>{{ ns.cost or 'Search details' }}</span><span class="more">Search details</span></summary>
+  <summary>{{ icon('info') }}<span>{{ ns.cost or 'This search is finished.' }}</span><span class="more">Search details</span></summary>
   <div class="search-notes-body">
     {% if ns.queries %}
-    <h3>Searches run on X</h3>
+    <h3>What was searched on X</h3>
     <ol class="queries">{% for q in ns.queries %}<li><code>{{ q }}</code></li>{% endfor %}</ol>
     {% endif %}
     {% if ns.other %}
@@ -81,7 +82,7 @@
           {{ score(c.fit_score, s.fit_threshold) }}
         </div>
       </div>
-      <p class="cand-reason">{{ c.fit_reason or 'Not scored yet.' }}</p>
+      <p class="cand-reason">{{ c.fit_reason or 'Being reviewed…' }}</p>
       {% if c.evidence %}
       <details class="ev-more">
         <summary>Evidence <span class="count">{{ c.evidence|length }}</span></summary>

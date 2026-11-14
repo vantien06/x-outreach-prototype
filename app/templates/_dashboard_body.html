@@ -38,19 +38,18 @@
 
 <div class="limits">
   <span class="limit"><span class="limit-k">Sends today</span><b>{{ u.sends_today }} / {{ u.send_cap }}</b></span>
-  {% if u.candidate_cap %}<span class="limit"><span class="limit-k">Candidates scored today</span><b>{{ u.candidates_today }} / {{ u.candidate_cap }}</b></span>{% endif %}
-  {% if u.global_budget %}<span class="limit"><span class="limit-k">Estimated spend</span><b>${{ "%.2f"|format(u.global_spent) }} of ${{ "%.2f"|format(u.global_budget) }}</b></span>{% endif %}
-  {% if u.locked %}<span class="limit bad">{{ icon('alert', 14) }}Budget ceiling reached: discovery, drafting and sending are locked.</span>{% endif %}
-  {% if u.sends_today >= u.send_cap %}<span class="limit bad">{{ icon('alert', 14) }}Daily send limit reached; the queue resumes tomorrow (UTC).</span>{% endif %}
+  {% if u.candidate_cap %}<span class="limit"><span class="limit-k">People reviewed today</span><b>{{ u.candidates_today }} / {{ u.candidate_cap }}</b></span>{% endif %}
+  {% if u.locked %}<span class="limit bad">{{ icon('alert', 14) }}This tool has reached its usage limit for now. Finding people, drafting and sending are paused.</span>{% endif %}
+  {% if u.sends_today >= u.send_cap %}<span class="limit bad">{{ icon('alert', 14) }}You have reached today's sending limit. Queued messages go out tomorrow.</span>{% endif %}
 </div>
-{% if account.last_poll_error %}<div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Reply tracking:</strong> {{ account.last_poll_error }}</span></div>{% endif %}
+{% if account.last_poll_error %}<div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Replies could not be checked just now.</strong> {{ account.last_poll_error }}</span></div>{% endif %}
 
 <section class="panel attention {% if d.attention %}has-items{% endif %}" id="attention">
   <div class="panel-head">
     <h2>Needs your attention {% if d.attention %}<span class="count">{{ d.attention }}</span>{% endif %}</h2>
   </div>
   {% if not d.replies_open and not d.needs_check %}
-  {{ empty("You're all caught up", "New replies and sends that need a manual check show up here.", 'check') }}
+  {{ empty("You're all caught up", "Replies, and any message whose delivery needs a second look, appear here.", 'check') }}
   {% endif %}
   <div class="list">
   {% for r in d.replies_open %}
@@ -77,7 +76,7 @@
       {{ avatar(o.recipient_handle, o.recipient_name, '', o.recipient_avatar) }}
       <div class="row-title">
         <a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</a>
-        <span class="muted">delivery unknown</span>
+        <span class="muted">not sure this was delivered</span>
       </div>
       {{ badge('needs_check', 'Check on X') }}
     </div>
@@ -85,7 +84,7 @@
     <div class="actions">
       <a class="btn" href="{{ chat_url(o, account) }}" target="_blank" rel="noopener">Open conversation on X{{ icon('external', 13) }}</a>
       <form method="post" action="/outreach/{{ o.id }}/delivered"><button class="btn">{{ icon('check', 14) }}It was delivered</button></form>
-      <form method="post" action="/outreach/{{ o.id }}/not-delivered"><button class="btn">It was not delivered, queue it again</button></form>
+      <form method="post" action="/outreach/{{ o.id }}/not-delivered"><button class="btn">It was not delivered, send it again</button></form>
     </div>
   </article>
   {% endfor %}
@@ -96,8 +95,8 @@
 <section class="panel" id="blocked">
   <div class="panel-head">
     <div>
-      <h2>Blocked, not sent <span class="count">{{ d.blocked|length }}</span></h2>
-      <p class="sub">Nothing was delivered to these people, and the tool will not retry.</p>
+      <h2>Blocked <span class="count">{{ d.blocked|length }}</span></h2>
+      <p class="sub">These messages were not delivered and will not be tried again.</p>
     </div>
   </div>
   <div class="list">
@@ -122,7 +121,7 @@
   <div class="panel-head">
     <div>
       <h2>Approved, waiting to send <span class="count">{{ d.queue|length }}</span></h2>
-      <p class="sub">Sent one at a time with a pause between messages{% if account.paused %} (currently stopped){% endif %}.</p>
+      <p class="sub">{% if account.paused %}Sending is stopped. These stay queued until you resume.{% else %}These go out one at a time, with a pause between messages.{% endif %}</p>
     </div>
   </div>
   <div class="list">
@@ -147,7 +146,7 @@
   <div class="panel-head">
     <div>
       <h2>Sent {% if d.sent %}<span class="count">{{ d.sent|length }}</span>{% endif %}</h2>
-      <p class="sub">Open a row to see the conversation. A first message to someone who does not follow you lands in their <strong>Message requests</strong> on X until they accept it.</p>
+      <p class="sub">Open a row to see the conversation. If someone does not follow you, your message waits in their <strong>Message requests</strong> on X until they accept it.</p>
     </div>
   </div>
   {% if not d.sent %}

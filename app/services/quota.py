@@ -55,8 +55,8 @@ def budget_locked(conn: sqlite3.Connection) -> bool:
 def check_budget(conn: sqlite3.Connection) -> None:
     if budget_locked(conn):
         raise LimitReached(
-            f"The global budget ceiling (${get_settings().global_budget_usd:.2f} estimated spend) has been reached. "
-            "Discovery, drafting and sending are locked until the host raises GLOBAL_BUDGET_USD."
+            "This tool has reached its usage limit for now, so finding people, drafting and sending are paused. "
+            "Please contact the person who runs it."
         )
 
 

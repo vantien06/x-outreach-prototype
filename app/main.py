@@ -98,7 +98,7 @@ def render(request: Request, name: str, account=None, **ctx) -> HTMLResponse:
     return templates.TemplateResponse(request, name, {
         "s": s, "account": account, "flashes": request.session.pop("flash", []),
         "problems": s.config_problems(), "nav": nav_data(account) if account else None,
-        "est_quick": discovery.estimate_usd("quick"), "est_wide": discovery.estimate_usd("wide"), **ctx,
+        **ctx,
     })
 
 
@@ -240,7 +240,7 @@ def auth_login(request: Request):
         request.session["account_id"] = accounts.upsert(ME)
         return login_redirect()
     if not s.x_client_id:
-        flash(request, "X_CLIENT_ID is not configured, so sign-in with X cannot start.", "error")
+        flash(request, "Sign-in with X is not set up on this deployment yet (X_CLIENT_ID is missing).", "error")
         return login_redirect()
     from .x import real
 
@@ -311,13 +311,13 @@ def create_campaign(request: Request, background: BackgroundTasks, name: str = F
         return login_redirect()
     mode = "seeds" if mode == "seeds" else "segment"
     if mode == "segment" and not segment.strip():
-        flash(request, "Describe the target segment.", "error")
+        flash(request, "Please describe who you want to reach.", "error")
         return back(request)
     if mode == "seeds" and not discovery.parse_handles(seeds):
-        flash(request, "Enter at least one seed handle, e.g. @someone.", "error")
+        flash(request, "Please enter at least one seed account, for example @someone.", "error")
         return back(request)
     if not pitch.strip():
-        flash(request, "Say who you are and why you are reaching out. Drafts are built from this.", "error")
+        flash(request, "Please say who you are and why you are reaching out. Every draft is written from this.", "error")
         return back(request)
     with db() as conn:
         try:
@@ -328,7 +328,7 @@ def create_campaign(request: Request, background: BackgroundTasks, name: str = F
         cur = conn.execute(
             "INSERT INTO campaigns (account_id, name, mode, segment, seeds, pitch, depth, created_at) VALUES (?,?,?,?,?,?,?,?)",
             (account["id"], name.strip() or (segment.strip()[:40] or "Seed campaign"), mode, segment.strip(),
-             seeds.strip(), pitch.strip(), "wide" if depth == "wide" else "quick", iso()),
+             seeds.strip(), pitch.strip(), depth if depth in discovery.SEARCH_SIZES else "quick", iso()),
         )
         campaign_id = cur.lastrowid
     background.add_task(discovery.run_campaign, campaign_id, clients.get_x(account), clients.get_llm())
@@ -402,7 +402,7 @@ def draft_selected(request: Request, background: BackgroundTasks, campaign_id: i
             (campaign_id, account["id"]))]
     ids = [c for c in candidate_id if c in owned]
     if not ids:
-        flash(request, "Select at least one person to draft a message for.", "error")
+        flash(request, "Tick at least one person to draft a message for.", "error")
         return back(request)
     with db() as conn:
         # Marked before the background job starts, so the review page knows drafts are on their way.
@@ -507,7 +507,7 @@ def outreach_action(request: Request, outreach_id: int, action: str, text: str =
             return card_removed(request, account)
     elif action == "unapprove":
         if not outreach.human_move(aid, outreach_id, "approved", "drafted", approved_at=None):
-            flash(request, "Too late to pull this back: it is already being sent or was sent.", "error")
+            flash(request, "This message is already on its way or has been sent, so it cannot be pulled back.", "error")
     elif action == "delivered":
         outreach.human_move(aid, outreach_id, "needs_check", "sent", sent_at=iso(),
                             reason="Operator confirmed on X that it was delivered.")
@@ -544,11 +544,11 @@ def account_action(request: Request, action: str, confirm: str = Form("")):
         flash(request, "Sending resumed.")
     elif action == "delete":
         if confirm.strip().lower() != account["handle"].lower():
-            flash(request, "Type your handle exactly to confirm deletion.", "error")
+            flash(request, "To confirm, type your handle exactly as shown.", "error")
             return back(request)
         accounts.disconnect_and_delete(account["id"])
         request.session.clear()
-        flash(request, "Account disconnected and its data deleted.")
+        flash(request, "Your account is disconnected and your data has been deleted.")
         return login_redirect()
     return back(request)
 

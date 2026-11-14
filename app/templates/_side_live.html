@@ -3,7 +3,7 @@
   <div class="meter-block">
     <div class="meter-row"><span>Sends today</span><b>{{ nav.sends_today }} / {{ nav.send_cap }}</b></div>
     <div class="meter {% if nav.sends_today >= nav.send_cap %}full{% endif %}" role="img" aria-label="{{ nav.send_left }} sends left today"><i style="width: {{ [(100 * nav.sends_today / nav.send_cap) if nav.send_cap else 0, 100]|min|round|int }}%"></i></div>
-    <p class="meter-note">{% if nav.locked %}Budget ceiling reached{% elif nav.sends_today >= nav.send_cap %}Limit reached, resumes tomorrow (UTC){% else %}{{ nav.send_left }} left today{% endif %}</p>
+    <p class="meter-note">{% if nav.locked %}Paused: usage limit reached{% elif nav.sends_today >= nav.send_cap %}Limit reached, resumes tomorrow{% else %}{{ nav.send_left }} left today{% endif %}</p>
   </div>
   {% if nav.drafted %}
   <a class="side-cta" href="/review"><b>{{ nav.drafted }}</b> draft{{ '' if nav.drafted == 1 else 's' }} to review</a>

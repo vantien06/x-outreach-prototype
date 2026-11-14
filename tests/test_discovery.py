@@ -85,7 +85,7 @@ def test_refused_query_is_reported_and_the_rest_still_run():
     discovery.run_campaign(cid, x, ScriptedLLM([Q1, Q2]))
     row = camp_row(cid)
     assert row["status"] == "ready"
-    assert "Queries X refused" in row["note"] and "invalid operator" in row["note"]
+    assert "Searches X did not accept" in row["note"] and "invalid operator" in row["note"]
     assert set(candidates()) == {"u1"}
 
 
@@ -156,7 +156,7 @@ def test_filtered_accounts_are_not_scored_and_are_named_in_the_note():
     assert found["demo_linh_robotics"]["fit_score"] >= 60
     assert found["demo_grace_foodie"]["fit_score"] < 60            # a real person, just not a fit: scored low
     assert "demo_tom_cryptoalpha" not in found and "demo_newsbot_ai" not in found
-    assert "left out before scoring" in note and "@demo_tom_cryptoalpha" in note
+    assert "skipped because" in note and "@demo_tom_cryptoalpha" in note
     with db() as conn:
         for r in found.values():
             assert conn.execute("SELECT COUNT(*) FROM evidence WHERE candidate_id=?", (r["id"],)).fetchone()[0] >= 1
@@ -172,7 +172,7 @@ def test_reachable_people_are_scored_before_people_with_closed_dms(monkeypatch):
     cid = campaign(acc["id"])
     discovery.run_campaign(cid, SearchX({Q1: [closed + open_]}), llm)
     assert set(llm.scored) == {"u10", "u11"}
-    assert "more people were found but not scored" in camp_row(cid)["note"]
+    assert "matched the search but were not reviewed" in camp_row(cid)["note"]
 
 
 def test_profile_location_is_kept_as_evidence():
@@ -190,7 +190,7 @@ def test_note_reports_cost_estimate_when_live(monkeypatch):
     acc = make_account()
     cid = campaign(acc["id"])
     discovery.run_campaign(cid, SearchX({Q1: [[(user(i), post(i)) for i in range(10)]]}), ScriptedLLM([Q1]))
-    assert "Estimated cost of this search: $0.06 (10 posts read, 10 people scored" in camp_row(cid)["note"]
+    assert "Search summary: 10 posts read, 10 people reviewed." in camp_row(cid)["note"]
 
 
 # ---------------------------------------------------------------- seed campaigns

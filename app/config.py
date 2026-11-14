@@ -38,9 +38,6 @@ class Settings(BaseSettings):
     max_queries: int = 3
     posts_per_query: int = 20
     max_posts_per_campaign: int = 60
-    # A campaign created with "Wide search" multiplies the three limits above and the
-    # candidate limit by this factor (about three times the cost).
-    wide_search_factor: int = 3
     seed_following_limit: int = 100
     # Seed campaigns read this many recent posts per person before scoring (the
     # X endpoint returns at least 5).
