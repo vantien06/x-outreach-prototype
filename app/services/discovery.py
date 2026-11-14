@@ -104,11 +104,25 @@ def run_campaign(campaign_id: int, x: XClient, llm: LLMClient) -> None:
         _set_status(campaign_id, "failed", f"Unexpected error: {type(e).__name__}: {e}")
 
 
+def limits(depth: str) -> dict:
+    """Search budget for one campaign. 'wide' trades about three times the cost for more people."""
+    s = get_settings()
+    k = max(1, s.wide_search_factor) if depth == "wide" else 1
+    return {"queries": min(8, s.max_queries * k), "per_query": min(100, s.posts_per_query * k),
+            "posts": s.max_posts_per_campaign * k, "candidates": s.max_candidates_per_campaign * k}
+
+
+def estimate_usd(depth: str) -> float:
+    """Upper-bound estimate shown before a search starts."""
+    s, lim = get_settings(), limits(depth)
+    return lim["posts"] * s.cost_x_post_read + (lim["candidates"] + 1) * s.cost_llm_fast
+
+
 def _search_segment(segment: str, x: XClient, llm: LLMClient, account_id: int, want: int,
-                    skip: set[str], notes: list[str], cost: dict) -> dict[str, Found]:
+                    skip: set[str], notes: list[str], cost: dict, lim: dict) -> dict[str, Found]:
     """Run the LLM's queries within the post budget. `want` is how many scorable people we are aiming for."""
     s = get_settings()
-    queries = clean_queries(llm.build_queries(segment).queries, s.max_queries)
+    queries = clean_queries(llm.build_queries(segment).queries, lim["queries"])
     quota.record(account_id, "llm_fast", 1)
     cost["llm_fast"] += 1
     if not queries:
@@ -116,14 +130,14 @@ def _search_segment(segment: str, x: XClient, llm: LLMClient, account_id: int, w
 
     found: dict[str, Found] = {}
     seen_posts: set[str] = set()
-    left = s.max_posts_per_campaign
+    left = lim["posts"]
     more: list[tuple[int, str, str]] = []   # (new authors on first page, query, next_token)
     failed: list[str] = []
 
     def page(q: str, token: str | None) -> tuple[int, str | None]:
         nonlocal left
         # 10 is the smallest page X serves; every returned post is billed.
-        posts, users, nxt = x.search_page(q, max(10, min(s.posts_per_query, left)), token)
+        posts, users, nxt = x.search_page(q, max(10, min(lim["per_query"], left)), token)
         left -= len(posts)
         cost["posts"] += len(posts)
         new_authors = 0
@@ -231,7 +245,8 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
         raise quota.LimitReached(
             f"Daily limit of {s.daily_candidate_cap} scored candidates reached for this account. Try again tomorrow (UTC)."
         )
-    budget = s.max_candidates_per_campaign if left is None else min(left, s.max_candidates_per_campaign)
+    lim = limits(camp["depth"] if "depth" in camp.keys() else "quick")
+    budget = lim["candidates"] if left is None else min(left, lim["candidates"])
     skip = known | {camp["me"]}
     notes: list[str] = []
     cost = {"posts": 0, "users": 0, "llm_fast": 0}
@@ -239,7 +254,7 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
 
     if is_segment:
         segment = camp["segment"]
-        found = _search_segment(segment, x, llm, account_id, budget, skip, notes, cost)
+        found = _search_segment(segment, x, llm, account_id, budget, skip, notes, cost, lim)
     else:
         segment = camp["segment"] or DEFAULT_SEGMENT
         found = _follow_seeds(camp["seeds"], x, notes, cost)
@@ -270,9 +285,9 @@ def _run(campaign_id: int, x: XClient, llm: LLMClient) -> None:
         with db() as conn:
             cur = conn.execute(
                 "INSERT OR IGNORE INTO candidates (account_id, campaign_id, x_user_id, handle, name, bio, followers,"
-                " can_dm, source, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                " can_dm, source, avatar_url, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                 (account_id, campaign_id, user.id, user.handle, user.name, user.bio, user.followers,
-                 None if user.can_dm is None else int(user.can_dm), f.source, iso()),
+                 None if user.can_dm is None else int(user.can_dm), f.source, user.avatar_url, iso()),
             )
             if not cur.rowcount:
                 continue

@@ -20,18 +20,18 @@
 <section class="panel" id="new-campaign">
   <div class="panel-head">
     <div>
-      <h2>New campaign</h2>
+      <h2><span class="tile" aria-hidden="true">{{ icon('search') }}</span>New campaign</h2>
       <p class="sub">Describe who you want to reach. The tool finds people, shows why each one fits, and waits for you before drafting anything.</p>
     </div>
   </div>
   <form method="post" action="/campaigns" class="form">
     <div class="field">
-      <label for="f-name">Campaign name <span class="opt">optional</span></label>
+      <label for="f-name">Campaign name <span class="opt">(optional)</span></label>
       <input id="f-name" name="name" placeholder="e.g. SEA robotics founders">
     </div>
 
     <fieldset class="field">
-      <legend>How should it find people?</legend>
+      <legend>How should it find people? <span class="req" title="Required">*</span></legend>
       <div class="segmented">
         <label><input type="radio" name="mode" value="segment" checked><span><b>Target segment</b><small>Search recent posts by topic</small></span></label>
         <label><input type="radio" name="mode" value="seeds"><span><b>Seed accounts</b><small>Look at who they follow</small></span></label>
@@ -39,24 +39,33 @@
     </fieldset>
 
     <div class="field f-segment">
-      <label for="f-segment">Target segment <span class="opt opt-seeds">optional with seed accounts</span></label>
+      <label for="f-segment">Target segment <span class="req req-segment" title="Required">*</span><span class="opt opt-seeds">(optional with seed accounts)</span></label>
       <textarea id="f-segment" name="segment" rows="2" placeholder="e.g. Founders and engineers building robots or embodied AI in Southeast Asia"></textarea>
       <p class="hint">Used to search recent posts and to score fit. With seed accounts, it is optional and only used for scoring.</p>
     </div>
 
     <div class="field f-seeds">
-      <label for="f-seeds">Seed accounts</label>
+      <label for="f-seeds">Seed accounts <span class="req" title="Required">*</span></label>
       <input id="f-seeds" name="seeds" placeholder="@handle1, @handle2">
       <p class="hint">Comma-separated handles or profile links.</p>
     </div>
 
     <div class="field">
-      <label for="f-pitch">Who you are and why you are reaching out</label>
+      <label for="f-pitch">Who you are and why you are reaching out <span class="req" title="Required">*</span></label>
       <textarea id="f-pitch" name="pitch" rows="3" required placeholder="e.g. I'm with GenAI Fund. We back AI and robotics builders in Southeast Asia and run a founder community in Vietnam."></textarea>
       <p class="hint">Drafts only say about you what you write here.</p>
     </div>
 
-    <div class="form-actions"><button class="btn primary">{{ icon('search') }}Find people</button></div>
+    <fieldset class="field f-depth">
+      <legend>Search size <span class="opt">(optional)</span></legend>
+      <div class="segmented">
+        <label><input type="radio" name="depth" value="quick" checked><span><b>Quick</b><small>Up to {{ s.max_posts_per_campaign }} posts, about ${{ '%.2f'|format(est_quick) }}</small></span></label>
+        <label><input type="radio" name="depth" value="wide"><span><b>Wide</b><small>About {{ s.wide_search_factor }}× the people, about ${{ '%.2f'|format(est_wide) }}</small></span></label>
+      </div>
+      <p class="hint">X bills every post a search returns, so a wider search costs more. Amounts are estimates.</p>
+    </fieldset>
+
+    <div class="form-actions"><button class="btn primary">{{ icon('search') }}Find people</button><span class="hint"><span class="req">*</span> required</span></div>
   </form>
 </section>
 {% endblock %}

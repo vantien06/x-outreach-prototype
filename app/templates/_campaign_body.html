@@ -18,8 +18,25 @@
 {% elif camp.status == 'failed' %}
 <div class="notice error" role="alert">{{ icon('alert') }}<span><strong>Discovery stopped:</strong> {{ camp.note }}</span></div>
 {% elif camp.note %}
-<div class="notice info">{{ icon('info') }}<span class="note-lines">{% for line in camp.note.split('
-') %}<span>{{ line }}</span>{% endfor %}</span></div>
+{% set ns = namespace(queries=[], cost='', other=[]) %}
+{% for line in camp.note.splitlines() %}
+  {% if line.startswith('Queries used: ') %}{% set ns.queries = line[14:].split(' | ') %}
+  {% elif line.startswith('Estimated cost') or line.startswith('Dry run:') %}{% set ns.cost = line %}
+  {% elif line.strip() %}{% set ns.other = ns.other + [line] %}{% endif %}
+{% endfor %}
+<details class="search-notes">
+  <summary>{{ icon('info') }}<span>{{ ns.cost or 'Search details' }}</span><span class="more">Search details</span></summary>
+  <div class="search-notes-body">
+    {% if ns.queries %}
+    <h3>Searches run on X</h3>
+    <ol class="queries">{% for q in ns.queries %}<li><code>{{ q }}</code></li>{% endfor %}</ol>
+    {% endif %}
+    {% if ns.other %}
+    <h3>Notes</h3>
+    <ul class="note-list">{% for line in ns.other %}<li>{{ line }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+</details>
 {% endif %}
 
 {% if cands %}
@@ -28,7 +45,7 @@
   <div class="toolbar">
     <div>
       <h2>{{ cands|length }} {{ 'person' if cands|length == 1 else 'people' }} found</h2>
-      <p class="sub">People scoring {{ s.fit_threshold }} or more who can receive your DM are preselected. Every reason links to the bio or post it is based on.</p>
+      <p class="sub">Tick the people you want a draft for. Nothing is drafted or sent until you choose.</p>
     </div>
     {% if camp.status != 'discovering' %}
     <div class="toolbar-actions">
@@ -44,10 +61,10 @@
   <article class="cand {% if c.fit_score is not none and c.fit_score < s.fit_threshold %}is-low{% endif %}">
     <div class="cand-pick">
       {% if selectable %}
-      <input type="checkbox" name="candidate_id" value="{{ c.id }}" id="cand-{{ c.id }}" aria-label="Select {{ c.name or c.handle }}" {% if c.fit_score >= s.fit_threshold and c.can_dm != 0 %}checked{% endif %}>
+      <input type="checkbox" name="candidate_id" value="{{ c.id }}" id="cand-{{ c.id }}" aria-label="Select {{ c.name or c.handle }}">
       {% endif %}
     </div>
-    {{ avatar(c.handle, c.name, 'lg') }}
+    {{ avatar(c.handle, c.name, 'lg', c.avatar_url) }}
     <div class="cand-main">
       <div class="cand-head">
         <div class="cand-id">
@@ -55,8 +72,7 @@
           <div class="cand-meta">
             {% if c.fit_category %}<span class="chip">{{ c.fit_category }}</span>{% endif %}
             <span>{{ "{:,}".format(c.followers) }} followers</span>
-            <span class="sep" aria-hidden="true">·</span>
-            <span>{{ c.source }}</span>
+            {% if c.source and not c.source.startswith('search:') %}<span class="sep" aria-hidden="true">·</span><span>{{ c.source }}</span>{% endif %}
           </div>
         </div>
         <div class="cand-state">
@@ -67,18 +83,21 @@
       </div>
       <p class="cand-reason">{{ c.fit_reason or 'Not scored yet.' }}</p>
       {% if c.evidence %}
-      <ul class="evidence">
-        {% for e in c.evidence %}
-        <li class="ev {% if e.cited %}cited{% endif %}">
-          <span class="ev-kind">{{ e.kind }}</span>
-          <span class="ev-text">{{ e.text }}</span>
-          <span class="ev-foot">
-            {% if e.cited %}<span class="ev-cited">{{ icon('check', 12) }}Used for the fit reason</span>{% endif %}
-            {% if e.url %}<a href="{{ e.url }}" target="_blank" rel="noopener">source{{ icon('external', 11) }}</a>{% endif %}
-          </span>
-        </li>
-        {% endfor %}
-      </ul>
+      <details class="ev-more">
+        <summary>Evidence <span class="count">{{ c.evidence|length }}</span></summary>
+        <ul class="evidence">
+          {% for e in c.evidence %}
+          <li>
+            {% if e.url %}<a class="ev ev-link {% if e.cited %}cited{% endif %}" href="{{ e.url }}" target="_blank" rel="noopener" title="Open this {{ 'post' if e.kind == 'post' else 'profile' }} on X">
+            {% else %}<span class="ev {% if e.cited %}cited{% endif %}">{% endif %}
+              <span class="ev-kind">{{ e.kind }}</span>
+              <span class="ev-text">{{ e.text }}</span>
+              {% if e.url %}<span class="ev-open" aria-hidden="true">{{ icon('external', 13) }}</span>{% endif %}
+            {% if e.url %}</a>{% else %}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
       {% elif camp.status != 'discovering' %}
       <p class="muted">No bio or posts are on file for this person.</p>
       {% endif %}

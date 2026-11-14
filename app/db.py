@@ -145,6 +145,8 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("outreach", "last_reply_check_at", "TEXT"),
     ("outreach", "reply_checks", "INTEGER NOT NULL DEFAULT 0"),
     ("mock_dm_events", "kind", "TEXT NOT NULL DEFAULT 'message'"),
+    ("candidates", "avatar_url", "TEXT NOT NULL DEFAULT ''"),
+    ("campaigns", "depth", "TEXT NOT NULL DEFAULT 'quick'"),
 ]
 
 

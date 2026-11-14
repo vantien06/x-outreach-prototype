@@ -31,13 +31,16 @@ class Settings(BaseSettings):
     daily_candidate_cap: int = 80
     global_budget_usd: float = 0.0
 
-    max_candidates_per_campaign: int = 30
+    max_candidates_per_campaign: int = 15
     # Segment search: up to max_queries queries, posts_per_query posts on the first
     # page of each, and never more than max_posts_per_campaign posts in total
     # (every returned post is billed).
-    max_queries: int = 5
-    posts_per_query: int = 40
-    max_posts_per_campaign: int = 200
+    max_queries: int = 3
+    posts_per_query: int = 20
+    max_posts_per_campaign: int = 60
+    # A campaign created with "Wide search" multiplies the three limits above and the
+    # candidate limit by this factor (about three times the cost).
+    wide_search_factor: int = 3
     seed_following_limit: int = 100
     # Seed campaigns read this many recent posts per person before scoring (the
     # X endpoint returns at least 5).

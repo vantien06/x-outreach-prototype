@@ -97,7 +97,8 @@ def render(request: Request, name: str, account=None, **ctx) -> HTMLResponse:
     s = get_settings()
     return templates.TemplateResponse(request, name, {
         "s": s, "account": account, "flashes": request.session.pop("flash", []),
-        "problems": s.config_problems(), "nav": nav_data(account) if account else None, **ctx,
+        "problems": s.config_problems(), "nav": nav_data(account) if account else None,
+        "est_quick": discovery.estimate_usd("quick"), "est_wide": discovery.estimate_usd("wide"), **ctx,
     })
 
 
@@ -117,7 +118,7 @@ def review_card(request: Request, account, outreach_id: int, message: str = "") 
 
 def load_cards(conn, account_id: int, where: str, args: tuple = ()) -> list[dict]:
     rows = conn.execute(
-        "SELECT o.*, c.name, c.bio, c.followers, c.can_dm, c.fit_score, c.fit_category, c.fit_reason, c.source,"
+        "SELECT o.*, c.name, c.avatar_url, c.bio, c.followers, c.can_dm, c.fit_score, c.fit_category, c.fit_reason, c.source,"
         " k.name AS campaign_name FROM outreach o JOIN candidates c ON c.id=o.candidate_id"
         f" JOIN campaigns k ON k.id=o.campaign_id WHERE o.account_id=? AND {where} ORDER BY o.created_at, o.id",
         (account_id, *args),
@@ -129,7 +130,7 @@ def load_cards(conn, account_id: int, where: str, args: tuple = ()) -> list[dict
     return cards
 
 
-OUTREACH_WITH_NAME = ("SELECT o.*, c.name AS recipient_name FROM outreach o"
+OUTREACH_WITH_NAME = ("SELECT o.*, c.name AS recipient_name, c.avatar_url AS recipient_avatar FROM outreach o"
                       " LEFT JOIN candidates c ON c.id=o.candidate_id")
 # A reply is anything the recipient sent that is not mere activity (see services/replies.py).
 IS_REPLY = "COALESCE(e.label,'') NOT IN ('activity','unknown')"
@@ -143,7 +144,7 @@ def dashboard_data(account) -> dict:
         replies_open = conn.execute(
             "SELECT e.*, o.recipient_handle, o.recipient_x_user_id, o.dm_conversation_id, o.text AS our_text,"
             " o.sent_at AS our_sent_at,"
-            " c.name AS recipient_name FROM dm_events e JOIN outreach o ON o.id=e.outreach_id"
+            " c.name AS recipient_name, c.avatar_url AS recipient_avatar FROM dm_events e JOIN outreach o ON o.id=e.outreach_id"
             " LEFT JOIN candidates c ON c.id=o.candidate_id"
             " WHERE e.account_id=? AND e.direction='in' AND e.handled=0 ORDER BY e.id DESC", (aid,)).fetchall()
         replied = conn.execute(
@@ -152,7 +153,7 @@ def dashboard_data(account) -> dict:
         latest = ("(SELECT e.{col} FROM dm_events e WHERE e.outreach_id=o.id AND e.direction='in'"
                   f" ORDER BY {IS_REPLY} DESC, e.id DESC LIMIT 1)")
         sent = conn.execute(
-            f"SELECT o.*, c.name AS recipient_name, {latest.format(col='label')} AS reply_label,"
+            f"SELECT o.*, c.name AS recipient_name, c.avatar_url AS recipient_avatar, {latest.format(col='label')} AS reply_label,"
             f" {latest.format(col='text')} AS reply_text, {latest.format(col='id')} AS reply_event"
             " FROM outreach o LEFT JOIN candidates c ON c.id=o.candidate_id"
             " WHERE o.account_id=? AND o.state='sent' ORDER BY o.sent_at DESC LIMIT 100", (aid,)).fetchall()
@@ -292,7 +293,8 @@ def campaigns_page(request: Request):
 
 @app.post("/campaigns")
 def create_campaign(request: Request, background: BackgroundTasks, name: str = Form(""), mode: str = Form("segment"),
-                    segment: str = Form(""), seeds: str = Form(""), pitch: str = Form("")):
+                    segment: str = Form(""), seeds: str = Form(""), pitch: str = Form(""),
+                    depth: str = Form("quick")):
     account = current(request)
     if not account:
         return login_redirect()
@@ -313,9 +315,9 @@ def create_campaign(request: Request, background: BackgroundTasks, name: str = F
             flash(request, str(e), "error")
             return back(request)
         cur = conn.execute(
-            "INSERT INTO campaigns (account_id, name, mode, segment, seeds, pitch, created_at) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO campaigns (account_id, name, mode, segment, seeds, pitch, depth, created_at) VALUES (?,?,?,?,?,?,?,?)",
             (account["id"], name.strip() or (segment.strip()[:40] or "Seed campaign"), mode, segment.strip(),
-             seeds.strip(), pitch.strip(), iso()),
+             seeds.strip(), pitch.strip(), "wide" if depth == "wide" else "quick", iso()),
         )
         campaign_id = cur.lastrowid
     background.add_task(discovery.run_campaign, campaign_id, clients.get_x(account), clients.get_llm())

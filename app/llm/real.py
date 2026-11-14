@@ -64,6 +64,8 @@ The reason must rest only on the evidence given. Do not add facts from your own 
 person, their employer or their projects, even if you recognise the name. List the ids of the \
 evidence items your reason relies on.
 
+Keep the reason short: at most two sentences and about 40 words. Lead with what the person is \nbuilding or doing, then the main gap or doubt if there is one. The operator can open the evidence \nfor detail, so do not restate it.
+
 {UNTRUSTED}"""
 
 DRAFT_SYSTEM = f"""You draft a first direct message on X from a fund to one person. A human operator \

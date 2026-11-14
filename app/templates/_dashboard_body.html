@@ -56,7 +56,7 @@
   {% for r in d.replies_open %}
   <article class="row-item">
     <div class="row-head">
-      {{ avatar(r.recipient_handle, r.recipient_name) }}
+      {{ avatar(r.recipient_handle, r.recipient_name, '', r.recipient_avatar) }}
       <div class="row-title">
         <a class="who" href="https://x.com/{{ r.recipient_handle }}" target="_blank" rel="noopener">{% if r.recipient_name %}{{ r.recipient_name }} {% endif %}@{{ r.recipient_handle }}</a>
         <span class="muted">{{ 'activity' if r.label == 'unknown' else 'replied' }} · {{ when(r.event_at) }}</span>
@@ -74,7 +74,7 @@
   {% for o in d.needs_check %}
   <article class="row-item">
     <div class="row-head">
-      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      {{ avatar(o.recipient_handle, o.recipient_name, '', o.recipient_avatar) }}
       <div class="row-title">
         <a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</a>
         <span class="muted">delivery unknown</span>
@@ -104,7 +104,7 @@
   {% for o in d.blocked %}
   <article class="row-item compact">
     <div class="row-head">
-      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      {{ avatar(o.recipient_handle, o.recipient_name, '', o.recipient_avatar) }}
       <div class="row-title">
         <a class="who" href="https://x.com/{{ o.recipient_handle }}" target="_blank" rel="noopener">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</a>
         <span class="reason-inline">{{ o.reason }}</span>
@@ -129,7 +129,7 @@
   {% for o in d.queue %}
   <article class="row-item compact">
     <div class="row-head">
-      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      {{ avatar(o.recipient_handle, o.recipient_name, '', o.recipient_avatar) }}
       <div class="row-title">
         <span class="who">{% if o.recipient_name %}{{ o.recipient_name }} {% endif %}@{{ o.recipient_handle }}</span>
         {% if o.reason %}<span class="reason-inline muted">{{ o.reason }}</span>{% endif %}
@@ -161,7 +161,7 @@
      conversation is already shown under "Needs your attention" above. #}
   <details class="sent-item" data-key="sent-{{ o.id }}"{% if o.reply_event and o.reply_label not in ('activity', 'unknown') and o.id not in attn %} open{% endif %}>
     <summary>
-      {{ avatar(o.recipient_handle, o.recipient_name) }}
+      {{ avatar(o.recipient_handle, o.recipient_name, '', o.recipient_avatar) }}
       <span class="sent-who"><b>{{ o.recipient_name or ('@' ~ o.recipient_handle) }}</b>{% if o.recipient_name %} <span class="handle">@{{ o.recipient_handle }}</span>{% endif %}</span>
       <span class="sent-excerpt">{{ o.text }}</span>
       <span class="sent-time">{{ when(o.sent_at) }}</span>

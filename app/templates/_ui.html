@@ -39,8 +39,8 @@
 <span class="badge b-{{ tones.get(state, 'neutral') }}{% if state in ('sending', 'discovering') %} is-live{% endif %}"{% if title %} title="{{ title }}"{% endif %}><i class="dot" aria-hidden="true"></i>{{ label or words.get(state) or (state|replace('_', ' ')|capitalize) }}</span>
 {%- endmacro %}
 
-{% macro avatar(handle, name=None, size='') -%}
-<span class="avatar {{ size }}" data-avatar="{{ handle }}" aria-hidden="true">{{ ((name or handle or '?')|trim)[:1]|upper }}</span>
+{% macro avatar(handle, name=None, size='', url='') -%}
+<span class="avatar {{ size }}" data-avatar="{{ handle }}" aria-hidden="true">{{ ((name or handle or '?')|trim)[:1]|upper }}{% if url %}<img src="{{ url|replace('_normal.', '_bigger.') }}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">{% endif %}</span>
 {%- endmacro %}
 
 {% macro empty(title, hint='', ico='inbox') -%}

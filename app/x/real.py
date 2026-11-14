@@ -51,7 +51,7 @@ from .base import ChatEvent, DMEvent, SendResult, XAmbiguous, XAuthError, XError
 AUTHORIZE_URL = "https://x.com/i/oauth2/authorize"
 API = "https://api.x.com/2"
 SCOPES = ["tweet.read", "users.read", "follows.read", "dm.read", "dm.write", "offline.access"]
-USER_FIELDS = "description,location,public_metrics,receives_your_dm"
+USER_FIELDS = "description,location,profile_image_url,public_metrics,receives_your_dm"
 TIMEOUT = httpx.Timeout(20.0, connect=10.0)
 
 
@@ -107,6 +107,7 @@ def _user(d: dict) -> XUser:
         id=d["id"], handle=d.get("username", ""), name=d.get("name", ""), bio=d.get("description", "") or "",
         followers=(d.get("public_metrics") or {}).get("followers_count", 0),
         can_dm=d.get("receives_your_dm"), location=d.get("location", "") or "",
+        avatar_url=d.get("profile_image_url", "") or "",
     )
 
 

@@ -44,6 +44,7 @@ class XUser:
     can_dm: bool | None = None
     # Free-text profile location, as the person typed it. Often empty.
     location: str = ""
+    avatar_url: str = ""
 
     @property
     def url(self) -> str:

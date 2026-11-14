@@ -1,7 +1,7 @@
 {% from "_ui.html" import icon, badge, avatar, score %}
 <section class="panel card review-card" data-outreach-id="{{ c.id }}">
   <header class="review-head">
-    {{ avatar(c.recipient_handle, c.name, 'lg') }}
+    {{ avatar(c.recipient_handle, c.name, 'lg', c.avatar_url) }}
     <div class="cand-id">
       <a class="who" href="https://x.com/{{ c.recipient_handle }}" target="_blank" rel="noopener"><b>{{ c.name or c.recipient_handle }}</b> <span class="handle">@{{ c.recipient_handle }}</span></a>
       <div class="cand-meta">
