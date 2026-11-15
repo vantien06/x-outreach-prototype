@@ -33,18 +33,18 @@ UNKNOWN_SUMMARY = "Activity from the recipient that this tool could not identify
 
 
 def check_interval_seconds(age_seconds: float) -> float:
-    """How long to wait between checks of one conversation, by time since it was sent."""
+    """How long to wait between background checks of one conversation, by time since it was sent.
+
+    Kept sparse on purpose: every check is a billed X read. The fresh check happens when the
+    operator reloads the dashboard (see request_check); this is only a safety net.
+    """
     if get_settings().dry_run:
         return 2
-    if age_seconds < 600:
-        return 30             # first 10 minutes: every 30 seconds, when a reply is most likely
-    if age_seconds < 3600:
-        return 120            # rest of the first hour: every 2 minutes
     if age_seconds < 86400:
-        return 600            # first day: every 10 minutes
+        return 3600           # first day: hourly
     if age_seconds < 7 * 86400:
-        return 3600           # first week: hourly
-    return 6 * 3600           # after that: every 6 hours
+        return 6 * 3600       # first week: every 6 hours
+    return 24 * 3600          # after that: once a day
 
 
 def conversation_id_for(row, me: str) -> str:
