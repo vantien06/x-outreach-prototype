@@ -248,6 +248,20 @@ def test_not_due_conversations_cost_no_reads():
     assert len(x.chat_calls) == 3
 
 
+def test_reloading_the_dashboard_asks_for_a_fresh_check_once():
+    acc = make_account()
+    many_sent(acc, 3)
+    x = FakeX()
+    replies.poll(acc, x, NoLLM())
+    assert replies.request_check(acc["id"]) == 0          # checked a moment ago: nothing to do
+    with db() as conn:
+        conn.execute("UPDATE outreach SET last_reply_check_at='2026-01-01T00:00:00.000000Z'")
+    assert replies.request_check(acc["id"]) == 3
+    assert replies.request_check(acc["id"]) == 0          # already due: reloading again adds nothing
+    replies.poll(acc, x, NoLLM())
+    assert len(x.chat_calls) == 6
+
+
 def test_check_interval_backs_off_with_age(monkeypatch):
     monkeypatch.setenv("DRY_RUN", "false")
     get_settings.cache_clear()

@@ -15,7 +15,7 @@ from . import clients
 from .config import get_settings
 from .db import db, init_db, iso, seconds_ago
 from .llm.base import LLMError
-from .services import accounts, discovery, outreach, quota
+from .services import accounts, discovery, outreach, quota, replies
 from .worker import Worker
 from .x.base import XAmbiguous, XError, chat_conversation_id
 
@@ -222,6 +222,11 @@ def home(request: Request):
     account = current(request)
     if not account:
         return render(request, "login.html")
+    try:
+        # A full page load asks for a fresh reply check; the live dashboard picks the result up.
+        replies.request_check(account["id"])
+    except Exception:
+        log.exception("could not request a reply check")
     return render(request, "dashboard.html", account, d=dashboard_data(account))
 
 

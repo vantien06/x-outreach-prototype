@@ -83,6 +83,24 @@ def due(account_id: int, limit: int) -> list:
     return [r for _, _, r in ranked[:limit]]
 
 
+def request_check(account_id: int, limit: int = 8, min_gap_seconds: float = 10) -> int:
+    """Make the most recently sent conversations due now, so the worker checks them on its next tick.
+
+    Called when the operator reloads the dashboard. Conversations checked in the last few seconds are
+    left alone, so reloading repeatedly does not spend extra reads. Returns how many were made due.
+    """
+    cutoff = iso(now() - timedelta(seconds=min_gap_seconds))
+    with db() as conn:
+        ids = [r["id"] for r in conn.execute(
+            "SELECT id FROM outreach WHERE account_id=? AND state IN ('sent','needs_check')"
+            " AND last_reply_check_at IS NOT NULL AND last_reply_check_at < ?"
+            " ORDER BY COALESCE(sent_at, sending_at) DESC LIMIT ?", (account_id, cutoff, limit))]
+        if ids:
+            conn.execute(f"UPDATE outreach SET last_reply_check_at=NULL WHERE id IN ({','.join('?' * len(ids))})", ids)
+            conn.execute("UPDATE accounts SET last_reply_poll_at=NULL WHERE id=?", (account_id,))
+    return len(ids)
+
+
 def poll(account, x: XClient, llm: LLMClient) -> int:
     """Check the conversations that are due. Returns the number of new replies stored.
 
