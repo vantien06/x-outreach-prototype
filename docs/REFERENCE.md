@@ -14,7 +14,6 @@ In hosted mode the host's X app and Anthropic key are used, and each user only s
 
 ```
 APP_MODE=hosted
-DRY_RUN=false
 BASE_URL=https://<your-domain>
 DATABASE_PATH=/data/outreach.db
 X_CLIENT_ID=...
@@ -39,7 +38,6 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 | Variable | Default | Meaning |
 |---|---|---|
 | `APP_MODE` | `local` | `local`: one operator, own keys. `hosted`: many users, host's keys, allowlist required |
-| `DRY_RUN` | `true` | `true` makes no X or LLM calls at all |
 | `BASE_URL` | `http://127.0.0.1:8000` | Public address of the app; the OAuth callback is built from it |
 | `X_CLIENT_ID`, `X_CLIENT_SECRET` | | From your X developer app |
 | `ANTHROPIC_API_KEY` | | Claude API key |
@@ -127,7 +125,7 @@ Upper bounds per campaign with default settings: a Quick segment search reads at
 - **Telling a reply from "accepted the request"** relies on reading the unencrypted envelope of X Chat events. It was right in both real cases we observed; that is a small sample.
 - **No follow-up messages.** One message per person, by design.
 - **One sending account per sign-in**, and one app instance. Scaling out needs a real queue and Postgres.
-- **Discovery quality depends on a 7-day search window** and on what people write in public. The new, broader query set and paging were tested in dry run and unit tests only, not yet against live X.
+- **Discovery quality depends on a 7-day search window** and on what people write in public. In live runs for a narrow regional segment, a quick search found one or two strong fits out of fifteen people reviewed; most of the rest were real builders based elsewhere. Seed accounts are the better route for such segments. Reading a second page of results has only been exercised by the tests.
 - **Not exercised against the live API:** token refresh and revoke, search paging, the profile `location` field, and X's real 403 and 429 responses. The code follows the documented behaviour.
 - **Cost figures are estimates**, as explained above.
 - **CSRF protection** relies on `SameSite=Lax` session cookies only.
@@ -148,8 +146,8 @@ The suite runs without keys or network access. It covers duplicate prevention, t
 ```
 app/main.py            routes and pages
 app/services/          discovery, drafting and sending, replies, quotas
-app/x/                 X client: real (httpx), mock (dry run), chat event reader
-app/llm/               Claude client and the dry-run stand-in
+app/x/                 X client: real (httpx), a stand-in used by the tests, chat event reader
+app/llm/               Claude client and the stand-in used by the tests
 app/worker.py          background sender and reply checker
 app/templates, static  server-rendered UI (HTMX)
 tests/                 pytest suite

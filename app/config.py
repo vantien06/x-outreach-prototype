@@ -13,7 +13,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_mode: Literal["local", "hosted"] = "local"
-    dry_run: bool = True
+    # Off by default. DRY_RUN=true swaps X and Claude for built-in stand-ins; the test suite uses it.
+    dry_run: bool = False
     base_url: str = "http://127.0.0.1:8000"
     database_path: str = "data/outreach.db"
 

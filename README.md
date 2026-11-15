@@ -1,134 +1,116 @@
 # Warm Outreach
 
-Find AI and robotics people on X, see why each one fits, review a personalised DM for each, and send only the ones you approve. Nobody is messaged twice, and the dashboard shows what was sent, who replied and what needs you.
+Warm Outreach helps you find AI and robotics people on X and start a real conversation with them. You describe who you are looking for. It finds people, shows why each one fits, and writes a personal DM for each, based on what they actually posted. You read every message first, and only the ones you approve are sent. Nobody is ever messaged twice.
 
-Give it a target segment or a few seed accounts. Every reason and every draft is tied to the person's own bio or posts, shown next to it. Nothing is sent until you approve it.
+## Two ways to try it
 
-**Two ways to try it**
+**1. Use the hosted version.** Open **<https://outreach.vantien.tech>**, type the invite code from my email, and sign in with your X account. There is nothing to install.
 
-- **Hosted demo:** open the link and enter the invite code from the submission email. Nothing to install.
-- **Run it yourself:** follow this page. About 1 minute to see it with sample data, 10 to 15 minutes to send real DMs from your own account.
+**2. Run it on your own computer.** Follow the six steps below, in order. It takes about 10 to 15 minutes, and most of that is creating the X app.
 
-## 1. See it in one minute (no keys)
+## Run it on your own computer
 
-You need [Git](https://git-scm.com) and [uv](https://docs.astral.sh/uv/).
+### Step 1. Get the code
+
+Install [Git](https://git-scm.com) and [uv](https://docs.astral.sh/uv/) if you do not have them. To install uv:
+
+- macOS or Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Windows: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
+
+Then download the project and install what it needs:
 
 ```bash
-# install uv once, if you do not have it
-#   macOS / Linux:  curl -LsSf https://astral.sh/uv/install.sh | sh
-#   Windows:        powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
 git clone https://github.com/vantien06/x-outreach-prototype.git
 cd x-outreach-prototype
 uv sync
-uv run uvicorn app.main:app --port 8000
 ```
 
-Open **<http://127.0.0.1:8000>** and choose **Enter dry run**.
+### Step 2. Create an X developer app
 
-This is dry run: fictional people, simulated sends and replies, no keys, nothing billed. It walks the whole flow, including a refused DM, an encrypted reply and an opt-out. Stop it with `Ctrl+C`.
+The tool talks to X through your own developer app.
 
-## 2. Go live with your own account (10 to 15 minutes)
+1. Go to the [X Developer Console](https://console.x.com) and sign in with your X account.
+2. Open **Apps**, then open your app (create one if the list is empty).
+3. Click **Settings** and fill in the form like this:
 
-You need three things. Steps A and B are the slow part; do them in two browser tabs.
-
-### A. An X developer app (about 5 minutes)
-
-1. Open the [X Developer Console](https://console.x.com) with the X account that will own the app, and create an app (or use the default one).
-2. Open the app, then **Settings** (authentication settings), and set:
-
-   | Setting | Value |
+   | Field | What to enter |
    |---|---|
-   | App permissions | **Read and write and Direct message** |
-   | Type of App | **Web App, Automated App or Bot** |
+   | App permissions | Read and write and Direct message |
+   | Type of App | Web App, Automated App or Bot |
    | Callback URI | `http://127.0.0.1:8000/auth/callback` |
-   | Website URL | any public page of yours, for example your GitHub profile (`localhost` is rejected) |
+   | Website URL | Any public page of yours, such as your GitHub profile |
 
-3. **Save Changes**. Copy the **OAuth 2.0 Client ID** and **Client Secret** when they are shown.
-4. Under **Credits**, buy a small amount. US$5 is plenty to try everything.
+4. Click **Save Changes**.
+5. Copy the **Client ID** and **Client Secret** and keep them somewhere for Step 4.
+6. Open **Credits** and add $5. That is more than enough to try everything.
 
-### B. An Anthropic API key (about 2 minutes)
+### Step 3. Get an Anthropic API key
 
-Create a key at <https://console.anthropic.com> and make sure the account has a little credit. The tool uses Claude Haiku 5.5 to judge fit and Claude Sonnet 5.5 to write drafts.
+The tool uses Claude to judge who fits and to write the drafts.
 
-### C. Put the keys in `.env` (1 minute)
+1. Go to <https://console.anthropic.com> and sign in.
+2. Create an API key and copy it.
+3. Make sure the account has a few dollars of credit.
 
-```bash
-cp .env.example .env        # Windows: copy .env.example .env
+### Step 4. Add your keys
+
+1. In the project folder, make a copy of the file `.env.example`.
+2. Rename the copy to `.env` (exactly that, with nothing after it).
+3. Open `.env` in any text editor and fill in these three lines:
+
+```
+X_CLIENT_ID=your client id from Step 2
+X_CLIENT_SECRET=your client secret from Step 2
+ANTHROPIC_API_KEY=your key from Step 3
 ```
 
-Open `.env` and change only these four lines:
+Save the file. You do not need to change anything else.
 
-```
-DRY_RUN=false
-X_CLIENT_ID=<your client id>
-X_CLIENT_SECRET=<your client secret>
-ANTHROPIC_API_KEY=<your key>
-```
-
-Leave everything else as it is. `.env` is ignored by Git.
-
-### D. Start it and sign in (1 minute)
+### Step 5. Start the tool
 
 ```bash
 uv run uvicorn app.main:app --port 8000
 ```
 
-Open **<http://127.0.0.1:8000>** (use `127.0.0.1`, not `localhost`), choose **Sign in with X**, and authorize the app with the account you want to send from.
+Leave this window open while you use the tool. To stop it, press `Ctrl+C`.
 
-Prefer Docker? `docker compose up --build` does the same with the same `.env`.
+### Step 6. Sign in
 
-### E. One thing on the sending account
+1. Open **<http://127.0.0.1:8000>** in your browser. Type the address exactly like this; `localhost` will not work.
+2. Click **Sign in with X** and approve the app with the X account you want to send from.
+3. One last thing, once: on x.com, open **Chat** with that same account and set the passcode X asks for. Without it, your messages may not reach people.
 
-Open **Messages** on x.com with the sending account and create the chat passcode X asks for. Until that is done, messages sent through the API may not reach the other person.
+You are ready.
 
-## 3. First run
+## Using it
 
-1. **New campaign** on the dashboard: describe who you want to reach, or switch to *Seed accounts* and enter a few handles whose follows you want to look through. Say who you are in your own words; drafts introduce you with exactly that.
-2. **Find people.** Each person appears with a fit score, a short reason, and the bio or posts behind it. "DMs closed to you" means X will not let this account message them.
-3. Tick the people you want and choose **Draft DMs for selected**.
-4. **Review queue:** each draft sits next to the evidence it uses. Edit, **Approve and queue**, or **Skip** (skipped drafts are kept and can be put back).
-5. Approved messages go out one at a time. The **Dashboard** shows what was sent, who replied, what was blocked and why. **Stop sending** halts everything at once.
+1. On the dashboard, start a **New campaign**. Describe the people you want to reach, or choose **Seed accounts** and enter a few handles to look through the people they follow. Then write one or two sentences about who you are; every draft introduces you with those words.
+2. Click **Find people**. Each person comes with a fit score, a short reason, and the bio or posts behind it.
+3. Tick the people you like and click **Draft DMs for selected**.
+4. Open the **Review queue**. Read each draft next to the evidence it is based on. Edit it if you want, then **Approve and queue** it, or **Skip** it. A skipped draft is kept and can be brought back.
+5. Approved messages are sent one at a time. The **Dashboard** shows what was sent, who replied, and anything that needs you. **Stop sending** pauses everything immediately.
 
-To test real sending without contacting strangers, use a second X account you control: follow it from the sending account, then run a *Seed accounts* campaign with the sending account's own handle as the seed.
-
-## How long setup takes
-
-Timed on a fresh clone of this repository (Windows 11, home broadband):
-
-| Step | Time |
-|---|---|
-| `git clone` | 3 s |
-| `uv sync` with an empty cache | 17 s |
-| Start to first page | 1 s |
-| **Dry run usable** | **under 1 minute** |
-| Whole test suite (`uv run pytest`) | 22 s |
-| `docker compose up --build`, first time | about 2 minutes |
-| Create the X app and copy its keys | about 5 minutes (by hand, not timed by machine) |
-| Create the Anthropic key | about 2 minutes (by hand) |
-| Edit `.env`, start, sign in | about 2 minutes (by hand) |
-| **Live and signed in** | **about 10 to 12 minutes** |
+Want to try a real send without messaging a stranger? Use a second X account of your own. Follow it from your sending account, then run a **Seed accounts** campaign with your sending account's handle as the seed.
 
 ## If something goes wrong
 
-| What you see | What to do |
+| What you see | How to fix it |
 |---|---|
-| X Console says "Not a valid URL format" | The Website URL must be a public `https://` address, not `localhost`. Leave the optional fields empty. |
-| After authorizing, X shows an error about the callback | The Callback URI in the X app must be exactly `http://127.0.0.1:8000/auth/callback`, and you must open the app at `http://127.0.0.1:8000`. |
-| "Sign-in with X is not set up" | `X_CLIENT_ID` is empty in `.env`, or the app was started before you edited it. Restart it. |
-| The page still says **DRY RUN** | `DRY_RUN=false` is not set in `.env`, or the app was not restarted. |
-| Port 8000 is busy | Another program uses it. Stop that program; the callback is registered for port 8000. |
-| Everyone shows "DMs closed to you" | That is X, not the tool: many people only accept DMs from accounts they follow. A verified or better-known sender reaches more people. |
-| The dashboard asks you to sign in again | The same X account signed in to another copy of this app (for example the hosted demo). One X account can be connected to one copy at a time. |
+| The X Console says "Not a valid URL format" | The Website URL has to be a public `https://` address, not `localhost`. Leave the optional fields empty. |
+| X shows a callback error after you approve | Check that the Callback URI is exactly `http://127.0.0.1:8000/auth/callback` and that you opened the tool at `http://127.0.0.1:8000`. |
+| "Sign-in with X is not set up" | The keys in `.env` are missing, or the tool was started before you saved the file. Stop it and start it again. |
+| The tool does not start because port 8000 is in use | Close the other program that is using port 8000, then start again. |
+| Most people show "DMs closed to you" | This comes from X. Many people only accept DMs from accounts they follow. |
+| The tool asks you to sign in again | The same X account signed in to another copy of the tool, such as the hosted version. Use each account with one copy at a time. |
 
-## What to know before you rely on it
+## Good to know
 
-- A first message to someone who does not follow you lands in their **Message requests**.
-- Replies typed in the X app are end-to-end encrypted. The tool shows who replied and when, and links to the conversation; the text is read on X.
-- Search covers the last 7 days of posts. Seed accounts usually find better-matched people than a keyword search for a narrow region.
-- Sending is deliberately slow and capped (20 a day, 90 seconds apart by default). Change the limits in `.env`.
-- X bills every post and profile the tool reads and every DM it sends. A Quick search costs about US$0.30.
+- If someone does not follow you, your first message waits in their **Message requests** until they accept it.
+- X encrypts replies. The tool tells you who replied and when, and gives you a link to read the reply on X.
+- Search only looks at the last 7 days of posts. For a narrow group, seed accounts usually find better matches.
+- Sending is slow on purpose: at most 20 messages a day, 90 seconds apart. You can change this in `.env`.
+- X charges for what the tool reads and sends. A quick search costs about $0.30 and each DM $0.015.
 
-Everything else is in **[docs/REFERENCE.md](docs/REFERENCE.md)**: hosting on Railway and the invite code, every setting, what X allows, how double-messaging is prevented, costs, limitations and tests. The one-page write-up is in **WRITEUP.md**.
+More detail is in [docs/REFERENCE.md](docs/REFERENCE.md): every setting, hosting it yourself, what X allows, costs and limits. The one-page write-up is in `WRITEUP.docx`.
 
-*A take-home assignment by Van Tien Nguyen for the GenAI Fund Forward Deployed Engineer role. A working prototype, not a product.*
+*A take-home assignment by Van Tien Nguyen for the GenAI Fund Forward Deployed Engineer role.*
