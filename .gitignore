@@ -1,16 +1,17 @@
+# Secrets
 .env
 .env.*
 !.env.example
+
+# Local data
 data/
-*.db
-*.db-wal
-*.db-shm
-*.sqlite*
+
+# Python
 .venv/
 __pycache__/
 .pytest_cache/
-*.pyc
+
+# Private notes
 ~$*
-WRITEUP*
+materials/WRITEUP*
 materials/VIDEO_SCRIPT*
-materials
