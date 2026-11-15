@@ -109,6 +109,5 @@ Want to try a real send without messaging a stranger? Use a second X account of 
 - Sending is slow on purpose: at most 20 messages a day, 90 seconds apart. You can change this in `.env`.
 - X charges for what the tool reads and sends. A quick search costs about $0.30 and each DM $0.015.
 
-More detail is in [docs/REFERENCE.md](docs/REFERENCE.md): every setting, hosting it yourself, what X allows, costs and limits. The one-page write-up is in `WRITEUP.docx`.
-
+More detail is in [docs/REFERENCE.md](docs/REFERENCE.md): every setting, hosting it yourself, what X allows, costs and limits.
 *A take-home assignment by Van Tien Nguyen for the GenAI Fund Forward Deployed Engineer role.*
