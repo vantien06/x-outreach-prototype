@@ -42,7 +42,7 @@ The tool talks to X through your own developer app.
 
 4. Click **Save Changes**.
 5. Copy the **Client ID** and **Client Secret** and keep them somewhere for Step 4.
-6. Open **Credits** and add $5. That is more than enough to try everything.
+6. Open **Credits** and add $5.
 
 ### Step 3. Get an Anthropic API key
 
@@ -55,7 +55,7 @@ The tool uses Claude to judge who fits and to write the drafts.
 ### Step 4. Add your keys
 
 1. In the project folder, make a copy of the file `.env.example`.
-2. Rename the copy to `.env` (exactly that, with nothing after it).
+2. Rename the copy to `.env`.
 3. Open `.env` in any text editor and fill in these three lines:
 
 ```
@@ -64,7 +64,7 @@ X_CLIENT_SECRET=your client secret from Step 2
 ANTHROPIC_API_KEY=your key from Step 3
 ```
 
-Save the file. You do not need to change anything else.
+Save the file.
 
 ### Step 5. Start the tool
 
@@ -76,11 +76,9 @@ Leave this window open while you use the tool. To stop it, press `Ctrl+C`.
 
 ### Step 6. Sign in
 
-1. Open **<http://127.0.0.1:8000>** in your browser. Type the address exactly like this; `localhost` will not work.
+1. Open **<http://127.0.0.1:8000>** in your browser.
 2. Click **Sign in with X** and approve the app with the X account you want to send from.
-3. One last thing, once: on x.com, open **Chat** with that same account and set the passcode X asks for. Without it, your messages may not reach people.
-
-You are ready.
+3. Make sure **Chat** is turned on for both the sending account and the receiving account. X asks each account to set a PIN the first time it opens Chat.
 
 ## Using it
 
