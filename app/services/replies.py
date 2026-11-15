@@ -36,8 +36,10 @@ def check_interval_seconds(age_seconds: float) -> float:
     """How long to wait between checks of one conversation, by time since it was sent."""
     if get_settings().dry_run:
         return 2
+    if age_seconds < 600:
+        return 30             # first 10 minutes: every 30 seconds, when a reply is most likely
     if age_seconds < 3600:
-        return 120            # first hour: every 2 minutes
+        return 120            # rest of the first hour: every 2 minutes
     if age_seconds < 86400:
         return 600            # first day: every 10 minutes
     if age_seconds < 7 * 86400:

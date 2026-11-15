@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     worker_enabled: bool = True
     worker_tick_seconds: float = 5.0
     # How often the worker looks for conversations that are due a reply check.
-    reply_poll_seconds: float = 20
+    reply_poll_seconds: float = 10
     # X allows 100 chat-history reads per 15 minutes and 10,000 per 24 hours per
     # user (response headers, 2026-11-14). Stay well under both.
     chat_reads_per_15min: int = 60

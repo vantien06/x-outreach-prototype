@@ -252,8 +252,8 @@ def test_check_interval_backs_off_with_age(monkeypatch):
     monkeypatch.setenv("DRY_RUN", "false")
     get_settings.cache_clear()
     hour, day = 3600, 86400
-    steps = [replies.check_interval_seconds(a) for a in (60, 2 * hour, 2 * day, 30 * day)]
-    assert steps == sorted(steps) and steps[0] == 120 and steps[-1] == 6 * hour
+    steps = [replies.check_interval_seconds(a) for a in (60, 20 * 60, 2 * hour, 2 * day, 30 * day)]
+    assert steps == sorted(steps) and steps[:2] == [30, 120] and steps[-1] == 6 * hour
 
 
 def test_failed_read_still_uses_allowance_and_reports(monkeypatch):
