@@ -53,6 +53,7 @@ Everything is set through environment variables or `.env`. `.env.example` lists 
 | `MAX_CANDIDATES_PER_CAMPAIGN` | `15` | People scored per Quick campaign |
 | `SEED_FOLLOWING_LIMIT`, `SEED_POSTS_PER_CANDIDATE` | `100`, `5` | Bounds on a seed campaign |
 | `CHAT_READS_PER_15MIN`, `CHAT_READS_PER_DAY`, `CHAT_READS_PER_TICK` | `60`, `6000`, `8` | Self-imposed limits on reply checks |
+| `REPLY_BACKGROUND_CHECKS` | `false` | Off: replies are checked only when you reload the Dashboard, so an idle tool spends no X credit. On: also checked in the background (hourly on the first day, then less often) |
 
 ## Using it
 

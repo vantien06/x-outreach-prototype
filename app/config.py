@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     worker_tick_seconds: float = 5.0
     # How often the worker looks for conversations that are due a reply check.
     reply_poll_seconds: float = 10
+    # Reply checks are billed X reads. Off: conversations are read only when the
+    # operator reloads the dashboard. On: also on a sparse background schedule.
+    reply_background_checks: bool = False
     # X allows 100 chat-history reads per 15 minutes and 10,000 per 24 hours per
     # user (response headers, 2026-11-14). Stay well under both.
     chat_reads_per_15min: int = 60

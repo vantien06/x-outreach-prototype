@@ -262,6 +262,21 @@ def test_reloading_the_dashboard_asks_for_a_fresh_check_once():
     assert len(x.chat_calls) == 6
 
 
+def test_nothing_is_read_in_the_background_until_the_dashboard_is_reloaded(monkeypatch):
+    monkeypatch.setenv("DRY_RUN", "false")
+    get_settings.cache_clear()
+    acc = make_account()
+    many_sent(acc, 3)
+    x = FakeX()
+    replies.poll(acc, x, NoLLM())
+    assert x.chat_calls == []                              # idle: no billed reads
+    assert replies.request_check(acc["id"]) == 3
+    replies.poll(acc, x, NoLLM())
+    assert len(x.chat_calls) == 3
+    replies.poll(acc, x, NoLLM())
+    assert len(x.chat_calls) == 3                          # and none again until the next reload
+
+
 def test_check_interval_backs_off_with_age(monkeypatch):
     monkeypatch.setenv("DRY_RUN", "false")
     get_settings.cache_clear()

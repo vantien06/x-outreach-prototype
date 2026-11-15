@@ -35,8 +35,9 @@ UNKNOWN_SUMMARY = "Activity from the recipient that this tool could not identify
 def check_interval_seconds(age_seconds: float) -> float:
     """How long to wait between background checks of one conversation, by time since it was sent.
 
-    Kept sparse on purpose: every check is a billed X read. The fresh check happens when the
-    operator reloads the dashboard (see request_check); this is only a safety net.
+    Only used when background checks are switched on (REPLY_BACKGROUND_CHECKS=true). By default
+    nothing is read in the background, because every check is a billed X read: conversations are
+    read when the operator reloads the dashboard (see request_check).
     """
     if get_settings().dry_run:
         return 2
@@ -60,10 +61,22 @@ def read_allowance(account_id: int) -> int:
     return max(0, min(s.chat_reads_per_tick, s.chat_reads_per_15min - used_15, s.chat_reads_per_day - used_day))
 
 
+REQUESTED = ""   # last_reply_check_at value meaning "the operator asked for a check now"
+
+
+def background_checks_on() -> bool:
+    s = get_settings()
+    return s.reply_background_checks or s.dry_run
+
+
 def due(account_id: int, limit: int) -> list:
-    """Conversations due a check: never-checked first (newest send first), then most overdue."""
+    """Conversations due a check: requested and never-checked first (newest send first), then most overdue.
+
+    With background checks off (the default), only conversations the operator asked for are due.
+    """
     if limit <= 0:
         return []
+    background = background_checks_on()
     with db() as conn:
         rows = conn.execute(
             "SELECT * FROM outreach WHERE account_id=? AND state IN ('sent','needs_check')", (account_id,)
@@ -72,7 +85,13 @@ def due(account_id: int, limit: int) -> list:
     ranked = []
     for r in rows:
         started = parse_iso(r["sent_at"] or r["sending_at"]) or t
-        last = parse_iso(r["last_reply_check_at"])
+        raw = r["last_reply_check_at"]
+        if raw == REQUESTED:
+            ranked.append((0, -started.timestamp(), r))
+            continue
+        if not background:
+            continue
+        last = parse_iso(raw)
         if last is None:
             ranked.append((0, -started.timestamp(), r))
             continue
@@ -93,10 +112,10 @@ def request_check(account_id: int, limit: int = 8, min_gap_seconds: float = 10) 
     with db() as conn:
         ids = [r["id"] for r in conn.execute(
             "SELECT id FROM outreach WHERE account_id=? AND state IN ('sent','needs_check')"
-            " AND last_reply_check_at IS NOT NULL AND last_reply_check_at < ?"
+            " AND (last_reply_check_at IS NULL OR (last_reply_check_at != '' AND last_reply_check_at < ?))"
             " ORDER BY COALESCE(sent_at, sending_at) DESC LIMIT ?", (account_id, cutoff, limit))]
         if ids:
-            conn.execute(f"UPDATE outreach SET last_reply_check_at=NULL WHERE id IN ({','.join('?' * len(ids))})", ids)
+            conn.execute(f"UPDATE outreach SET last_reply_check_at='' WHERE id IN ({','.join('?' * len(ids))})", ids)
             conn.execute("UPDATE accounts SET last_reply_poll_at=NULL WHERE id=?", (account_id,))
     return len(ids)
 
